@@ -1,0 +1,61 @@
+name: AWS_005_Setup_DBs
+
+on:
+  workflow_dispatch:
+    inputs:
+      aws_region: { required: false, default: us-east-1, type: string }
+      env_name: { required: false, default: dev, type: string }
+      mongo_instance_class: { required: false, default: db.t3.medium, type: string }
+  workflow_call:
+    inputs:
+      aws_region: { required: false, default: us-east-1, type: string }
+      env_name: { required: false, default: dev, type: string }
+      mongo_instance_class: { required: false, default: db.t3.medium, type: string }
+    secrets:
+      AWS_ACCESS_KEY_ID: { required: true }
+      AWS_SECRET_ACCESS_KEY: { required: true }
+      DB_MASTER_PASSWORD: { required: true }
+
+jobs:
+  create-dbs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ inputs.aws_region }}
+
+      - name: Create DocumentDB cluster (MongoDB-compatible)
+        run: |
+          PREFIX="ihcp-${{ inputs.env_name }}"
+          aws docdb create-db-cluster \
+            --db-cluster-identifier "${PREFIX}-docdb" \
+            --engine docdb \
+            --master-username care_admin \
+            --master-user-password "${{ secrets.DB_MASTER_PASSWORD }}" \
+            --tags Key=Project,Value=in-home-care-platform Key=Env,Value=${{ inputs.env_name }} 2>/dev/null || echo "DocumentDB cluster ${PREFIX}-docdb exists"
+
+          aws docdb create-db-instance \
+            --db-instance-identifier "${PREFIX}-docdb-1" \
+            --db-instance-class ${{ inputs.mongo_instance_class }} \
+            --db-cluster-identifier "${PREFIX}-docdb" \
+            --engine docdb 2>/dev/null || echo "DocumentDB instance exists"
+
+      - name: Create ElastiCache Redis cluster
+        run: |
+          PREFIX="ihcp-${{ inputs.env_name }}"
+          aws elasticache create-cache-cluster \
+            --cache-cluster-id "${PREFIX}-redis" \
+            --engine redis \
+            --cache-node-type cache.t3.micro \
+            --num-cache-nodes 1 \
+            --tags Key=Project,Value=in-home-care-platform Key=Env,Value=${{ inputs.env_name }} 2>/dev/null || echo "Redis cluster ${PREFIX}-redis exists"
+
+      - name: Create MSK (Kafka) cluster reference
+        run: |
+          echo "MSK cluster creation is a longer operation — use the AWS Console or a CloudFormation/CDK stack."
+          echo "Tag: Project=in-home-care-platform Env=${{ inputs.env_name }}"
+          echo "Recommended: kafka.t3.small, 2 brokers, 3 AZs, TLS enabled."

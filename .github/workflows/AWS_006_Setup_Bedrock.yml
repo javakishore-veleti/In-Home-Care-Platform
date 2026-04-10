@@ -1,0 +1,48 @@
+name: AWS_006_Setup_Bedrock
+
+on:
+  workflow_dispatch:
+    inputs:
+      aws_region: { required: false, default: us-east-1, type: string }
+      env_name: { required: false, default: dev, type: string }
+  workflow_call:
+    inputs:
+      aws_region: { required: false, default: us-east-1, type: string }
+      env_name: { required: false, default: dev, type: string }
+    secrets:
+      AWS_ACCESS_KEY_ID: { required: true }
+      AWS_SECRET_ACCESS_KEY: { required: true }
+
+jobs:
+  setup-bedrock:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ inputs.aws_region }}
+
+      - name: Verify Bedrock model access
+        run: |
+          echo "=== Foundation models available ==="
+          aws bedrock list-foundation-models \
+            --query "modelSummaries[?contains(modelId,'anthropic') || contains(modelId,'titan')].{id:modelId,provider:providerName}" \
+            --output table 2>/dev/null || echo "Bedrock not available in ${{ inputs.aws_region }}"
+
+      - name: Request model access (if needed)
+        run: |
+          echo "If models show 'ON_DEMAND' access needed, request via:"
+          echo "  aws bedrock create-model-access --model-id anthropic.claude-3-haiku-20240307-v1:0"
+          echo "  aws bedrock create-model-access --model-id amazon.titan-embed-text-v2:0"
+          echo ""
+          echo "Bedrock is pay-per-use — no provisioning beyond access approval."
+
+      - name: Create Bedrock knowledge base (optional — for RAG)
+        run: |
+          PREFIX="ihcp-${{ inputs.env_name }}"
+          echo "Bedrock Knowledge Base creation requires an S3 data source + OpenSearch Serverless collection."
+          echo "Use AWS Console or CDK for the initial setup, then reference the KB ID in LLM_PROVIDER settings."
+          echo "Tag: Project=in-home-care-platform Env=${{ inputs.env_name }}"

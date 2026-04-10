@@ -1,0 +1,52 @@
+name: AWS_002_Setup_Create_S3_EFS
+
+on:
+  workflow_dispatch:
+    inputs:
+      aws_region: { required: false, default: us-east-1, type: string }
+      env_name: { required: false, default: dev, type: string }
+  workflow_call:
+    inputs:
+      aws_region: { required: false, default: us-east-1, type: string }
+      env_name: { required: false, default: dev, type: string }
+    secrets:
+      AWS_ACCESS_KEY_ID: { required: true }
+      AWS_SECRET_ACCESS_KEY: { required: true }
+
+jobs:
+  create-s3-efs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ inputs.aws_region }}
+
+      - name: Create S3 bucket (documents + visit data)
+        run: |
+          BUCKET="ihcp-${{ inputs.env_name }}-documents-$(aws sts get-caller-identity --query Account --output text)"
+          aws s3api create-bucket --bucket "$BUCKET" \
+            --create-bucket-configuration LocationConstraint=${{ inputs.aws_region }} 2>/dev/null || echo "Bucket $BUCKET already exists"
+          aws s3api put-bucket-versioning --bucket "$BUCKET" --versioning-configuration Status=Enabled
+          aws s3api put-bucket-encryption --bucket "$BUCKET" \
+            --server-side-encryption-configuration '{"Rules":[{"ApplyServerSideEncryptionByDefault":{"SSEAlgorithm":"AES256"}}]}'
+          echo "S3 bucket: $BUCKET"
+
+      - name: Create EFS file system (shared model / config storage)
+        run: |
+          PREFIX="ihcp-${{ inputs.env_name }}"
+          EXISTING=$(aws efs describe-file-systems --query "FileSystems[?Tags[?Key=='Name'&&Value=='${PREFIX}-efs']].FileSystemId" --output text)
+          if [ -z "$EXISTING" ] || [ "$EXISTING" = "None" ]; then
+            FS_ID=$(aws efs create-file-system \
+              --performance-mode generalPurpose \
+              --throughput-mode bursting \
+              --encrypted \
+              --tags Key=Name,Value="${PREFIX}-efs" Key=Project,Value=in-home-care-platform \
+              --query 'FileSystemId' --output text)
+            echo "EFS created: $FS_ID"
+          else
+            echo "EFS exists: $EXISTING"
+          fi

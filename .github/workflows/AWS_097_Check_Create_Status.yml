@@ -1,0 +1,55 @@
+name: AWS_097_Check_Create_Status
+
+on:
+  workflow_dispatch:
+    inputs:
+      aws_region: { required: false, default: us-east-1, type: string }
+      env_name: { required: false, default: dev, type: string }
+
+jobs:
+  check-status:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ inputs.aws_region }}
+
+      - name: VPC
+        run: |
+          aws ec2 describe-vpcs --filters "Name=tag:Name,Values=ihcp-${{ inputs.env_name }}-vpc" \
+            --query 'Vpcs[].{VpcId:VpcId,State:State,CidrBlock:CidrBlock}' --output table 2>/dev/null || echo "VPC: not found"
+
+      - name: Subnets
+        run: |
+          VPC_ID=$(aws ec2 describe-vpcs --filters "Name=tag:Name,Values=ihcp-${{ inputs.env_name }}-vpc" --query 'Vpcs[0].VpcId' --output text 2>/dev/null)
+          if [ "$VPC_ID" != "None" ] && [ -n "$VPC_ID" ]; then
+            aws ec2 describe-subnets --filters "Name=vpc-id,Values=$VPC_ID" \
+              --query 'Subnets[].{SubnetId:SubnetId,AZ:AvailabilityZone,CIDR:CidrBlock,Name:Tags[?Key==`Name`].Value|[0]}' --output table
+          fi
+
+      - name: S3 bucket
+        run: aws s3api list-buckets --query "Buckets[?contains(Name,'ihcp-${{ inputs.env_name }}')].Name" --output table 2>/dev/null || echo "S3: not found"
+
+      - name: EFS
+        run: |
+          aws efs describe-file-systems --query "FileSystems[?Tags[?Key=='Name'&&contains(Value,'ihcp-${{ inputs.env_name }}')]].{Id:FileSystemId,State:LifeCycleState}" --output table 2>/dev/null || echo "EFS: not found"
+
+      - name: ECR repos
+        run: aws ecr describe-repositories --query "repositories[?contains(repositoryName,'ihcp-${{ inputs.env_name }}')].repositoryName" --output table 2>/dev/null || echo "ECR: not found"
+
+      - name: ECS cluster
+        run: aws ecs describe-clusters --clusters "ihcp-${{ inputs.env_name }}" --query 'clusters[].{Name:clusterName,Status:status,Tasks:runningTasksCount}' --output table 2>/dev/null || echo "ECS: not found"
+
+      - name: API Gateway
+        run: aws apigatewayv2 get-apis --query "Items[?contains(Name,'ihcp-${{ inputs.env_name }}')].{Name:Name,Id:ApiId,Endpoint:ApiEndpoint}" --output table 2>/dev/null || echo "APIGW: not found"
+
+      - name: DocumentDB
+        run: aws docdb describe-db-clusters --db-cluster-identifier "ihcp-${{ inputs.env_name }}-docdb" --query 'DBClusters[].{Id:DBClusterIdentifier,Status:Status,Endpoint:Endpoint}' --output table 2>/dev/null || echo "DocumentDB: not found"
+
+      - name: ElastiCache Redis
+        run: aws elasticache describe-cache-clusters --cache-cluster-id "ihcp-${{ inputs.env_name }}-redis" --query 'CacheClusters[].{Id:CacheClusterId,Status:CacheClusterStatus,Engine:Engine}' --output table 2>/dev/null || echo "Redis: not found"
+
+      - name: Bedrock models
+        run: aws bedrock list-foundation-models --query "modelSummaries[?contains(modelId,'anthropic') || contains(modelId,'titan')].modelId" --output table 2>/dev/null || echo "Bedrock: not available in region"

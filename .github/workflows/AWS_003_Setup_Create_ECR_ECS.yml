@@ -1,0 +1,44 @@
+name: AWS_003_Setup_Create_ECR_ECS
+
+on:
+  workflow_dispatch:
+    inputs:
+      aws_region: { required: false, default: us-east-1, type: string }
+      env_name: { required: false, default: dev, type: string }
+  workflow_call:
+    inputs:
+      aws_region: { required: false, default: us-east-1, type: string }
+      env_name: { required: false, default: dev, type: string }
+    secrets:
+      AWS_ACCESS_KEY_ID: { required: true }
+      AWS_SECRET_ACCESS_KEY: { required: true }
+
+jobs:
+  create-ecr-ecs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ inputs.aws_region }}
+
+      - name: Create ECR repositories (one per microservice)
+        run: |
+          PREFIX="ihcp-${{ inputs.env_name }}"
+          for svc in api-gateway auth-svc member-svc appointment-svc visit-management-svc visit-ingest-svc document-intelligence-svc mcp-gateway; do
+            aws ecr create-repository --repository-name "${PREFIX}/${svc}" \
+              --image-scanning-configuration scanOnPush=true \
+              --encryption-configuration encryptionType=AES256 2>/dev/null || echo "ECR ${PREFIX}/${svc} exists"
+          done
+
+      - name: Create ECS cluster
+        run: |
+          CLUSTER="ihcp-${{ inputs.env_name }}"
+          aws ecs create-cluster --cluster-name "$CLUSTER" \
+            --capacity-providers FARGATE FARGATE_SPOT \
+            --default-capacity-provider-strategy capacityProvider=FARGATE,weight=1 \
+            --tags key=Project,value=in-home-care-platform key=Env,value=${{ inputs.env_name }} 2>/dev/null || echo "ECS cluster $CLUSTER exists"
+          echo "ECS cluster: $CLUSTER"

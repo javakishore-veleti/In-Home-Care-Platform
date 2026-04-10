@@ -1,0 +1,101 @@
+name: AWS_100_Destroy_All
+
+on:
+  workflow_dispatch:
+    inputs:
+      aws_region: { required: false, default: us-east-1, type: string }
+      env_name: { required: false, default: dev, type: string }
+      confirm:
+        description: Type DESTROY to confirm
+        required: true
+        type: string
+
+jobs:
+  destroy:
+    runs-on: ubuntu-latest
+    if: ${{ inputs.confirm == 'DESTROY' }}
+    steps:
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ inputs.aws_region }}
+
+      - name: Delete ECS services + cluster
+        run: |
+          CLUSTER="ihcp-${{ inputs.env_name }}"
+          SVCS=$(aws ecs list-services --cluster "$CLUSTER" --query 'serviceArns[]' --output text 2>/dev/null)
+          for svc in $SVCS; do
+            aws ecs update-service --cluster "$CLUSTER" --service "$svc" --desired-count 0 2>/dev/null
+            aws ecs delete-service --cluster "$CLUSTER" --service "$svc" --force 2>/dev/null
+          done
+          aws ecs delete-cluster --cluster "$CLUSTER" 2>/dev/null || echo "ECS cluster not found"
+
+      - name: Delete ECR repos
+        run: |
+          PREFIX="ihcp-${{ inputs.env_name }}"
+          for svc in api-gateway auth-svc member-svc appointment-svc visit-management-svc visit-ingest-svc document-intelligence-svc mcp-gateway; do
+            aws ecr delete-repository --repository-name "${PREFIX}/${svc}" --force 2>/dev/null || true
+          done
+
+      - name: Delete API Gateway
+        run: |
+          API_ID=$(aws apigatewayv2 get-apis --query "Items[?Name=='ihcp-${{ inputs.env_name }}-api'].ApiId" --output text 2>/dev/null)
+          if [ -n "$API_ID" ] && [ "$API_ID" != "None" ]; then
+            aws apigatewayv2 delete-api --api-id "$API_ID"
+            echo "API Gateway $API_ID deleted"
+          fi
+
+      - name: Delete ElastiCache Redis
+        run: aws elasticache delete-cache-cluster --cache-cluster-id "ihcp-${{ inputs.env_name }}-redis" 2>/dev/null || echo "Redis not found"
+
+      - name: Delete DocumentDB
+        run: |
+          PREFIX="ihcp-${{ inputs.env_name }}"
+          aws docdb delete-db-instance --db-instance-identifier "${PREFIX}-docdb-1" 2>/dev/null || true
+          aws docdb delete-db-cluster --db-cluster-identifier "${PREFIX}-docdb" --skip-final-snapshot 2>/dev/null || echo "DocumentDB not found"
+
+      - name: Delete EFS
+        run: |
+          FS_ID=$(aws efs describe-file-systems --query "FileSystems[?Tags[?Key=='Name'&&Value=='ihcp-${{ inputs.env_name }}-efs']].FileSystemId" --output text 2>/dev/null)
+          if [ -n "$FS_ID" ] && [ "$FS_ID" != "None" ]; then
+            # Delete mount targets first
+            for mt in $(aws efs describe-mount-targets --file-system-id "$FS_ID" --query 'MountTargets[].MountTargetId' --output text 2>/dev/null); do
+              aws efs delete-mount-target --mount-target-id "$mt"
+            done
+            sleep 10
+            aws efs delete-file-system --file-system-id "$FS_ID"
+            echo "EFS $FS_ID deleted"
+          fi
+
+      - name: Empty + delete S3 bucket
+        run: |
+          BUCKET=$(aws s3api list-buckets --query "Buckets[?contains(Name,'ihcp-${{ inputs.env_name }}')].Name" --output text 2>/dev/null)
+          if [ -n "$BUCKET" ] && [ "$BUCKET" != "None" ]; then
+            aws s3 rm "s3://$BUCKET" --recursive
+            aws s3api delete-bucket --bucket "$BUCKET"
+            echo "S3 $BUCKET deleted"
+          fi
+
+      - name: Delete VPC (subnets, IGW, route tables)
+        run: |
+          VPC_ID=$(aws ec2 describe-vpcs --filters "Name=tag:Name,Values=ihcp-${{ inputs.env_name }}-vpc" --query 'Vpcs[0].VpcId' --output text 2>/dev/null)
+          if [ -n "$VPC_ID" ] && [ "$VPC_ID" != "None" ]; then
+            # Detach + delete IGW
+            for igw in $(aws ec2 describe-internet-gateways --filters "Name=attachment.vpc-id,Values=$VPC_ID" --query 'InternetGateways[].InternetGatewayId' --output text); do
+              aws ec2 detach-internet-gateway --internet-gateway-id "$igw" --vpc-id "$VPC_ID"
+              aws ec2 delete-internet-gateway --internet-gateway-id "$igw"
+            done
+            # Delete subnets
+            for sub in $(aws ec2 describe-subnets --filters "Name=vpc-id,Values=$VPC_ID" --query 'Subnets[].SubnetId' --output text); do
+              aws ec2 delete-subnet --subnet-id "$sub"
+            done
+            # Delete non-main route tables
+            for rt in $(aws ec2 describe-route-tables --filters "Name=vpc-id,Values=$VPC_ID" --query 'RouteTables[?Associations[?Main!=`true`]].RouteTableId' --output text); do
+              aws ec2 delete-route-table --route-table-id "$rt"
+            done
+            aws ec2 delete-vpc --vpc-id "$VPC_ID"
+            echo "VPC $VPC_ID deleted"
+          fi
+
+          echo "=== All AWS resources destroyed ==="

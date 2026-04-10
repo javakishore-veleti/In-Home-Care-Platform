@@ -1,0 +1,42 @@
+name: AWS_004_Setup_Create_APIGW
+
+on:
+  workflow_dispatch:
+    inputs:
+      aws_region: { required: false, default: us-east-1, type: string }
+      env_name: { required: false, default: dev, type: string }
+  workflow_call:
+    inputs:
+      aws_region: { required: false, default: us-east-1, type: string }
+      env_name: { required: false, default: dev, type: string }
+    secrets:
+      AWS_ACCESS_KEY_ID: { required: true }
+      AWS_SECRET_ACCESS_KEY: { required: true }
+
+jobs:
+  create-apigw:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ inputs.aws_region }}
+
+      - name: Create HTTP API Gateway
+        run: |
+          PREFIX="ihcp-${{ inputs.env_name }}"
+          EXISTING=$(aws apigatewayv2 get-apis --query "Items[?Name=='${PREFIX}-api'].ApiId" --output text)
+          if [ -z "$EXISTING" ] || [ "$EXISTING" = "None" ]; then
+            API_ID=$(aws apigatewayv2 create-api \
+              --name "${PREFIX}-api" \
+              --protocol-type HTTP \
+              --tags Project=in-home-care-platform,Env=${{ inputs.env_name }} \
+              --query 'ApiId' --output text)
+            aws apigatewayv2 create-stage --api-id "$API_ID" --stage-name '$default' --auto-deploy
+            echo "API Gateway created: $API_ID"
+          else
+            echo "API Gateway exists: $EXISTING"
+          fi

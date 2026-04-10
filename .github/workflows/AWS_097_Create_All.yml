@@ -1,0 +1,55 @@
+name: AWS_097_Create_All
+
+on:
+  workflow_dispatch:
+    inputs:
+      aws_region: { required: false, default: us-east-1, type: string }
+      env_name: { required: false, default: dev, type: string }
+
+jobs:
+  step_001_vpc:
+    uses: ./.github/workflows/AWS_001_Setup_Create_VPC.yml
+    with:
+      aws_region: ${{ inputs.aws_region }}
+      env_name: ${{ inputs.env_name }}
+    secrets: inherit
+
+  step_002_s3_efs:
+    needs: step_001_vpc
+    uses: ./.github/workflows/AWS_002_Setup_Create_S3_EFS.yml
+    with:
+      aws_region: ${{ inputs.aws_region }}
+      env_name: ${{ inputs.env_name }}
+    secrets: inherit
+
+  step_003_ecr_ecs:
+    needs: step_001_vpc
+    uses: ./.github/workflows/AWS_003_Setup_Create_ECR_ECS.yml
+    with:
+      aws_region: ${{ inputs.aws_region }}
+      env_name: ${{ inputs.env_name }}
+    secrets: inherit
+
+  step_004_apigw:
+    needs: step_003_ecr_ecs
+    uses: ./.github/workflows/AWS_004_Setup_Create_APIGW.yml
+    with:
+      aws_region: ${{ inputs.aws_region }}
+      env_name: ${{ inputs.env_name }}
+    secrets: inherit
+
+  step_005_dbs:
+    needs: step_001_vpc
+    uses: ./.github/workflows/AWS_005_Setup_DBs.yml
+    with:
+      aws_region: ${{ inputs.aws_region }}
+      env_name: ${{ inputs.env_name }}
+    secrets: inherit
+
+  step_006_bedrock:
+    needs: step_001_vpc
+    uses: ./.github/workflows/AWS_006_Setup_Bedrock.yml
+    with:
+      aws_region: ${{ inputs.aws_region }}
+      env_name: ${{ inputs.env_name }}
+    secrets: inherit
