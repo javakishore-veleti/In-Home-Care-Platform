@@ -1,0 +1,9 @@
+fastapi>=0.115
+uvicorn[standard]>=0.30
+pydantic>=2.7
+pydantic-settings>=2.4
+pymongo>=4.8
+structlog>=24.1
+python-dotenv>=1.0
+prometheus-client>=0.21
+aiokafka>=0.11

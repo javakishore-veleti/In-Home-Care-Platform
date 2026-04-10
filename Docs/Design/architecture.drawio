@@ -1,0 +1,229 @@
+<mxfile host="app.diagrams.net" version="24.0.0">
+  <diagram name="1. System Overview" id="ihcp-1">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="900" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="t" value="In-Home-Care-Platform — System Overview (from whiteboard)" style="text;html=1;align=center;verticalAlign=middle;fontSize=16;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="20" y="20" width="1360" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="p1" value="Field Staff&#10;(Mobile App)&#10;Slack #field-ops" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf" vertex="1" parent="1">
+          <mxGeometry x="20" y="100" width="180" height="100" as="geometry"/>
+        </mxCell>
+        <mxCell id="p2" value="Customer Support&#10;(Desktop App)&#10;Slack #customer-support" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf" vertex="1" parent="1">
+          <mxGeometry x="20" y="220" width="180" height="100" as="geometry"/>
+        </mxCell>
+        <mxCell id="p3" value="Admin Staff&#10;(React Admin Portal)&#10;Slack #care-admin" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf" vertex="1" parent="1">
+          <mxGeometry x="20" y="340" width="180" height="100" as="geometry"/>
+        </mxCell>
+        <mxCell id="p4" value="Member / Patient&#10;(Member Portal - React)&#10;Book appointment, view visits" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf" vertex="1" parent="1">
+          <mxGeometry x="20" y="460" width="180" height="100" as="geometry"/>
+        </mxCell>
+        <mxCell id="gw" value="API Gateway&#10;(FastAPI)&#10;auth · routing · rate limit" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366" vertex="1" parent="1">
+          <mxGeometry x="260" y="200" width="200" height="120" as="geometry"/>
+        </mxCell>
+        <mxCell id="auth" value="auth_svc&#10;sign up · sign in&#10;JWT · roles" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366" vertex="1" parent="1">
+          <mxGeometry x="520" y="80" width="160" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="mem" value="member_svc&#10;profile CRUD" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366" vertex="1" parent="1">
+          <mxGeometry x="700" y="80" width="140" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="appt" value="appointment_svc&#10;book · cancel · reschedule" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366" vertex="1" parent="1">
+          <mxGeometry x="860" y="80" width="180" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="vmgmt" value="visit_management_svc&#10;visit lifecycle · listing" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366" vertex="1" parent="1">
+          <mxGeometry x="1060" y="80" width="180" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="ving" value="visit_ingest_svc&#10;field data upload" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366" vertex="1" parent="1">
+          <mxGeometry x="520" y="200" width="160" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="docai" value="document_intelligence_svc&#10;GCP Document AI&#10;OCR · form extraction" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366" vertex="1" parent="1">
+          <mxGeometry x="700" y="200" width="200" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="mcp" value="mcp_gateway&#10;FastMCP + ADK GW&#10;MCP tools for LLM clients" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00" vertex="1" parent="1">
+          <mxGeometry x="920" y="200" width="200" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="kafka" value="Kafka&#10;events" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#fff2cc;strokeColor=#d6b656" vertex="1" parent="1">
+          <mxGeometry x="1140" y="200" width="120" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="mongo" value="MongoDB Central&#10;all collections" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#f8cecc;strokeColor=#b85450" vertex="1" parent="1">
+          <mxGeometry x="520" y="340" width="340" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="vec" value="VectorDB&#10;policies · runbooks&#10;tickets · slack_threads" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#fff2cc;strokeColor=#d6b656" vertex="1" parent="1">
+          <mxGeometry x="880" y="340" width="200" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="llm" value="LLM&#10;Google ADK&#10;/ OpenAI / Anthropic" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6" vertex="1" parent="1">
+          <mxGeometry x="1100" y="340" width="160" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="lg" value="LangGraph Agentic Flows&#10;visit_intelligence · slack_responder · document_author" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6" vertex="1" parent="1">
+          <mxGeometry x="520" y="460" width="740" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="slack" value="Slack workspace&#10;threaded replies" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf" vertex="1" parent="1">
+          <mxGeometry x="520" y="580" width="200" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="obs" value="Observability — Prometheus · Grafana · Kibana (ELK) · structlog PII-aware" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999;dashed=1" vertex="1" parent="1">
+          <mxGeometry x="20" y="680" width="1240" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="e1" style="endArrow=classic;html=1" edge="1" parent="1" source="p1" target="gw"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e2" style="endArrow=classic;html=1" edge="1" parent="1" source="p2" target="gw"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e3" style="endArrow=classic;html=1" edge="1" parent="1" source="p3" target="gw"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e4" style="endArrow=classic;html=1" edge="1" parent="1" source="p4" target="gw"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e5" style="endArrow=classic;html=1" edge="1" parent="1" source="gw" target="auth"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e6" style="endArrow=classic;html=1" edge="1" parent="1" source="gw" target="mem"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e7" style="endArrow=classic;html=1" edge="1" parent="1" source="gw" target="appt"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e8" style="endArrow=classic;html=1" edge="1" parent="1" source="gw" target="vmgmt"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e9" style="endArrow=classic;html=1" edge="1" parent="1" source="gw" target="ving"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e10" style="endArrow=classic;html=1" edge="1" parent="1" source="ving" target="docai"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e11" style="endArrow=classic;html=1" edge="1" parent="1" source="appt" target="kafka"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e12" style="endArrow=classic;html=1" edge="1" parent="1" source="kafka" target="vmgmt"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e13" style="endArrow=classic;html=1" edge="1" parent="1" source="gw" target="mongo"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e14" style="endArrow=classic;html=1" edge="1" parent="1" source="mcp" target="mongo"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e15" style="endArrow=classic;html=1" edge="1" parent="1" source="lg" target="mcp"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e16" style="endArrow=classic;html=1" edge="1" parent="1" source="lg" target="vec"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e17" style="endArrow=classic;html=1" edge="1" parent="1" source="lg" target="llm"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e18" style="endArrow=classic;html=1" edge="1" parent="1" source="lg" target="slack"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e19" style="endArrow=classic;html=1;dashed=1" edge="1" parent="1" source="p1" target="lg"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e20" style="endArrow=classic;html=1;dashed=1" edge="1" parent="1" source="p2" target="lg"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e21" style="endArrow=classic;html=1;dashed=1" edge="1" parent="1" source="p3" target="lg"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="lgnd" value="solid = HTTP/API   dashed = via Slack channel" style="text;html=1;fontSize=10;fontStyle=2" vertex="1" parent="1">
+          <mxGeometry x="20" y="750" width="600" height="20" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram name="2. Book Appointment Flow" id="ihcp-2">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="826" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="t" value="Book Appointment Flow" style="text;html=1;align=center;verticalAlign=middle;fontSize=15;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="20" y="20" width="1120" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="s1" value="Member Portal&#10;(React)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf" vertex="1" parent="1"><mxGeometry x="40" y="120" width="200" height="80" as="geometry"/></mxCell>
+        <mxCell id="s2" value="API Gateway&#10;(FastAPI)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366" vertex="1" parent="1"><mxGeometry x="280" y="120" width="200" height="80" as="geometry"/></mxCell>
+        <mxCell id="s3" value="appointment_svc&#10;validate service area + availability" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366" vertex="1" parent="1"><mxGeometry x="520" y="120" width="260" height="80" as="geometry"/></mxCell>
+        <mxCell id="s4" value="MongoDB&#10;appointments" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#f8cecc;strokeColor=#b85450" vertex="1" parent="1"><mxGeometry x="820" y="120" width="200" height="80" as="geometry"/></mxCell>
+        <mxCell id="s5" value="Kafka event&#10;appointment.booked" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656" vertex="1" parent="1"><mxGeometry x="520" y="240" width="260" height="60" as="geometry"/></mxCell>
+        <mxCell id="s6" value="visit_management_svc&#10;creates pending visit" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366" vertex="1" parent="1"><mxGeometry x="820" y="240" width="200" height="60" as="geometry"/></mxCell>
+        <mxCell id="s7" value="Push notification&#10;to assigned field staff" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf" vertex="1" parent="1"><mxGeometry x="820" y="340" width="200" height="60" as="geometry"/></mxCell>
+        <mxCell id="e1" style="endArrow=classic;html=1" edge="1" parent="1" source="s1" target="s2"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e2" style="endArrow=classic;html=1" edge="1" parent="1" source="s2" target="s3"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e3" style="endArrow=classic;html=1" edge="1" parent="1" source="s3" target="s4"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e4" style="endArrow=classic;html=1" edge="1" parent="1" source="s3" target="s5"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e5" style="endArrow=classic;html=1" edge="1" parent="1" source="s5" target="s6"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e6" style="endArrow=classic;html=1" edge="1" parent="1" source="s6" target="s7"><mxGeometry relative="1" as="geometry"/></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram name="3. Auth - Sign Up + Sign In" id="ihcp-3">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="826" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="t" value="Auth — Sign Up + Sign In (JWT + roles)" style="text;html=1;align=center;verticalAlign=middle;fontSize=15;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="20" y="20" width="1120" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="a1" value="Any portal or app" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf" vertex="1" parent="1"><mxGeometry x="40" y="120" width="200" height="60" as="geometry"/></mxCell>
+        <mxCell id="a2" value="API Gateway&#10;(FastAPI)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366" vertex="1" parent="1"><mxGeometry x="280" y="120" width="200" height="60" as="geometry"/></mxCell>
+        <mxCell id="a3" value="auth_svc&#10;POST /auth/signup   POST /auth/signin" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366" vertex="1" parent="1"><mxGeometry x="520" y="100" width="300" height="100" as="geometry"/></mxCell>
+        <mxCell id="a4" value="MongoDB — users&#10;email · hashed_password · role · ts" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#f8cecc;strokeColor=#b85450" vertex="1" parent="1"><mxGeometry x="860" y="100" width="260" height="80" as="geometry"/></mxCell>
+        <mxCell id="a5" value="JWT issued&#10;sub=user_id · role=member|field_staff|support|admin" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656" vertex="1" parent="1"><mxGeometry x="520" y="240" width="600" height="60" as="geometry"/></mxCell>
+        <mxCell id="a6" value="Gateway verifies JWT on every subsequent call&#10;role checked against endpoint ACL" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00" vertex="1" parent="1"><mxGeometry x="520" y="340" width="600" height="60" as="geometry"/></mxCell>
+        <mxCell id="e1" style="endArrow=classic;html=1" edge="1" parent="1" source="a1" target="a2"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e2" style="endArrow=classic;html=1" edge="1" parent="1" source="a2" target="a3"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e3" style="endArrow=classic;html=1" edge="1" parent="1" source="a3" target="a4"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e4" style="endArrow=classic;html=1;dashed=1" edge="1" parent="1" source="a3" target="a5"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e5" style="endArrow=classic;html=1" edge="1" parent="1" source="a5" target="a6"><mxGeometry relative="1" as="geometry"/></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram name="4. Visit Listing + Lifecycle" id="ihcp-4">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="826" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="t" value="Visit Listing + Lifecycle (scheduled → completed → reviewed)" style="text;html=1;align=center;verticalAlign=middle;fontSize=15;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="20" y="20" width="1120" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="v1" value="SCHEDULED&#10;visit created from appointment" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf" vertex="1" parent="1"><mxGeometry x="40" y="120" width="240" height="80" as="geometry"/></mxCell>
+        <mxCell id="v2" value="IN_PROGRESS&#10;field staff starts the visit" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366" vertex="1" parent="1"><mxGeometry x="320" y="120" width="240" height="80" as="geometry"/></mxCell>
+        <mxCell id="v3" value="COMPLETED&#10;field staff submits notes + forms" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366" vertex="1" parent="1"><mxGeometry x="600" y="120" width="240" height="80" as="geometry"/></mxCell>
+        <mxCell id="v4" value="REVIEWED&#10;admin / coordinator approves summary" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6" vertex="1" parent="1"><mxGeometry x="880" y="120" width="240" height="80" as="geometry"/></mxCell>
+        <mxCell id="v5" value="CANCELLED" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450" vertex="1" parent="1"><mxGeometry x="40" y="240" width="240" height="60" as="geometry"/></mxCell>
+        <mxCell id="v6" value="Member Portal&#10;shows upcoming + past visits" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf" vertex="1" parent="1"><mxGeometry x="40" y="360" width="300" height="80" as="geometry"/></mxCell>
+        <mxCell id="v7" value="Field Staff App&#10;shows today's assignments" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf" vertex="1" parent="1"><mxGeometry x="380" y="360" width="260" height="80" as="geometry"/></mxCell>
+        <mxCell id="v8" value="visit_ingest_svc → document_intelligence_svc&#10;OCR + field extraction on submitted forms" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366" vertex="1" parent="1"><mxGeometry x="680" y="360" width="440" height="80" as="geometry"/></mxCell>
+        <mxCell id="e1" style="endArrow=classic;html=1" edge="1" parent="1" source="v1" target="v2"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e2" style="endArrow=classic;html=1" edge="1" parent="1" source="v2" target="v3"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e3" style="endArrow=classic;html=1" edge="1" parent="1" source="v3" target="v4"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e4" style="endArrow=classic;html=1;dashed=1" edge="1" parent="1" source="v1" target="v5"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e5" style="endArrow=classic;html=1" edge="1" parent="1" source="v3" target="v8"><mxGeometry relative="1" as="geometry"/></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram name="5. Microservice Map" id="ihcp-5">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="826" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="t" value="Microservice Map — 8 services, what they own, and who they talk to" style="text;html=1;align=center;verticalAlign=middle;fontSize=15;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="20" y="20" width="1120" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="hdr" value="Service                                    Owns (Mongo collection)         Talks to" style="text;html=1;fontFamily=Courier New;fontSize=12;fontStyle=1;align=left" vertex="1" parent="1">
+          <mxGeometry x="40" y="70" width="1080" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="r1" value="api_gateway                                 — (routes only)                  all services" style="text;html=1;fontFamily=Courier New;fontSize=11;align=left" vertex="1" parent="1"><mxGeometry x="40" y="100" width="1080" height="20" as="geometry"/></mxCell>
+        <mxCell id="r2" value="auth_svc                                    users, sessions                  —" style="text;html=1;fontFamily=Courier New;fontSize=11;align=left" vertex="1" parent="1"><mxGeometry x="40" y="125" width="1080" height="20" as="geometry"/></mxCell>
+        <mxCell id="r3" value="member_svc                                  members                          —" style="text;html=1;fontFamily=Courier New;fontSize=11;align=left" vertex="1" parent="1"><mxGeometry x="40" y="150" width="1080" height="20" as="geometry"/></mxCell>
+        <mxCell id="r4" value="appointment_svc                             appointments                     Kafka, visit_management_svc" style="text;html=1;fontFamily=Courier New;fontSize=11;align=left" vertex="1" parent="1"><mxGeometry x="40" y="175" width="1080" height="20" as="geometry"/></mxCell>
+        <mxCell id="r5" value="visit_management_svc                        visits                           member_svc" style="text;html=1;fontFamily=Courier New;fontSize=11;align=left" vertex="1" parent="1"><mxGeometry x="40" y="200" width="1080" height="20" as="geometry"/></mxCell>
+        <mxCell id="r6" value="visit_ingest_svc                            visit_documents                  document_intelligence_svc" style="text;html=1;fontFamily=Courier New;fontSize=11;align=left" vertex="1" parent="1"><mxGeometry x="40" y="225" width="1080" height="20" as="geometry"/></mxCell>
+        <mxCell id="r7" value="document_intelligence_svc                   extracted_fields                 GCP Document AI" style="text;html=1;fontFamily=Courier New;fontSize=11;align=left" vertex="1" parent="1"><mxGeometry x="40" y="250" width="1080" height="20" as="geometry"/></mxCell>
+        <mxCell id="r8" value="mcp_gateway                                 — (tools only)                   all services, VectorDB, LLM" style="text;html=1;fontFamily=Courier New;fontSize=11;align=left" vertex="1" parent="1"><mxGeometry x="40" y="275" width="1080" height="20" as="geometry"/></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram name="6. LangGraph Agentic Flows" id="ihcp-6">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="826" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="t" value="LangGraph Agentic Flows — three workflows" style="text;html=1;align=center;verticalAlign=middle;fontSize=15;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="20" y="20" width="1120" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="f1" value="slack_channel_responder_flow&#10;Watches #field-ops, #customer-support, #care-admin&#10;Classifier → Retriever (VectorDB) → Answerer (LLM) → Responder (Slack reply)&#10;Escalation branch when no grounded answer" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;align=left;verticalAlign=top;spacingLeft=10;spacingTop=8" vertex="1" parent="1">
+          <mxGeometry x="40" y="80" width="1080" height="140" as="geometry"/>
+        </mxCell>
+        <mxCell id="f2" value="visit_intelligence_flow&#10;Triggered on visit completion (status=COMPLETED event from Kafka)&#10;Scorer → Gap Detector → Disposition Writer&#10;Uses VectorDB for similar past visits + MCP tools for member/visit lookup" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;align=left;verticalAlign=top;spacingLeft=10;spacingTop=8" vertex="1" parent="1">
+          <mxGeometry x="40" y="250" width="1080" height="140" as="geometry"/>
+        </mxCell>
+        <mxCell id="f3" value="document_author_flow&#10;Triggered after document_intelligence_svc processes a new visit document&#10;Summarizer → Reviewer Prompt → Draft Writer&#10;Draft presented for staff review in care_admin_portal or Slack" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;align=left;verticalAlign=top;spacingLeft=10;spacingTop=8" vertex="1" parent="1">
+          <mxGeometry x="40" y="420" width="1080" height="140" as="geometry"/>
+        </mxCell>
+        <mxCell id="shared" value="Shared infra: VectorClient Protocol (Qdrant default) · LlmClient Protocol (Google ADK default) · MCP tools via mcp_gateway · MongoDB for state" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656" vertex="1" parent="1">
+          <mxGeometry x="40" y="590" width="1080" height="60" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram name="7. Data Model" id="ihcp-7">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="826" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="t" value="Data Model — MongoDB collections grouped by owning service" style="text;html=1;align=center;verticalAlign=middle;fontSize=15;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="20" y="20" width="1120" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="c1" value="users (auth_svc)&#10;---&#10;_id, email, hashed_pw&#10;role, created_at" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;align=left;verticalAlign=top;spacingLeft=10;spacingTop=8;fontFamily=Courier New;fontSize=11" vertex="1" parent="1"><mxGeometry x="40" y="80" width="200" height="140" as="geometry"/></mxCell>
+        <mxCell id="c2" value="members (member_svc)&#10;---&#10;_id, tenant_id&#10;name (pii), dob (pii)&#10;phone (pii), email (pii)&#10;address (pii)&#10;insurance, preferences" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;align=left;verticalAlign=top;spacingLeft=10;spacingTop=8;fontFamily=Courier New;fontSize=11" vertex="1" parent="1"><mxGeometry x="260" y="80" width="220" height="180" as="geometry"/></mxCell>
+        <mxCell id="c3" value="appointments (appointment_svc)&#10;---&#10;_id, member_id&#10;service_type, service_area&#10;requested_date, status&#10;assigned_staff_id" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;align=left;verticalAlign=top;spacingLeft=10;spacingTop=8;fontFamily=Courier New;fontSize=11" vertex="1" parent="1"><mxGeometry x="500" y="80" width="260" height="160" as="geometry"/></mxCell>
+        <mxCell id="c4" value="visits (visit_management_svc)&#10;---&#10;_id, member_id, appointment_id&#10;staff_id, visit_date&#10;status (scheduled|in_progress&#10;|completed|reviewed|cancelled)&#10;notes_summary" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;align=left;verticalAlign=top;spacingLeft=10;spacingTop=8;fontFamily=Courier New;fontSize=11" vertex="1" parent="1"><mxGeometry x="780" y="80" width="260" height="180" as="geometry"/></mxCell>
+        <mxCell id="c5" value="visit_documents (visit_ingest_svc)&#10;---&#10;_id, visit_id, member_id&#10;doc_type, raw_text&#10;ocr_confidence" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;align=left;verticalAlign=top;spacingLeft=10;spacingTop=8;fontFamily=Courier New;fontSize=11" vertex="1" parent="1"><mxGeometry x="40" y="300" width="260" height="140" as="geometry"/></mxCell>
+        <mxCell id="c6" value="extracted_fields (doc_intel_svc)&#10;---&#10;_id, document_id&#10;field_name, value&#10;confidence, pii: bool" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;align=left;verticalAlign=top;spacingLeft=10;spacingTop=8;fontFamily=Courier New;fontSize=11" vertex="1" parent="1"><mxGeometry x="320" y="300" width="240" height="140" as="geometry"/></mxCell>
+        <mxCell id="c7" value="messages (slack_responder)&#10;---&#10;_id, event_id, channel&#10;agent_id, text, ts, thread_ts" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;align=left;verticalAlign=top;spacingLeft=10;spacingTop=8;fontFamily=Courier New;fontSize=11" vertex="1" parent="1"><mxGeometry x="580" y="300" width="240" height="140" as="geometry"/></mxCell>
+        <mxCell id="c8" value="answer_logs (immutable)&#10;---&#10;_id, message_id&#10;cited_ids[], model&#10;outcome, ts" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;align=left;verticalAlign=top;spacingLeft=10;spacingTop=8;fontFamily=Courier New;fontSize=11" vertex="1" parent="1"><mxGeometry x="840" y="300" width="220" height="140" as="geometry"/></mxCell>
+        <mxCell id="vec" value="VectorDB: policies · runbooks · tickets · slack_threads · visit_contexts" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656" vertex="1" parent="1"><mxGeometry x="40" y="480" width="1020" height="50" as="geometry"/></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

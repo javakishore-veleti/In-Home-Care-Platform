@@ -1,0 +1,14 @@
+services:
+  grafana:
+    image: grafana/grafana:11.1.0
+    container_name: ihcp-grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    volumes:
+      - grafana-data:/var/lib/grafana
+volumes:
+  grafana-data:
