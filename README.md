@@ -436,15 +436,36 @@ in-thread.
 ### Step 2 — Add bot token scopes
 
 Go to **OAuth & Permissions** → scroll to **Scopes** → under **Bot
-Token Scopes** add:
+Token Scopes**.
+
+**Which scopes to add depends on your Slack plan:**
+
+#### Free / Pro workspace (most users)
+
+| Scope | Why |
+|---|---|
+| `channels:read` | List channels |
+| `groups:read` | List private channels |
+| `chat:write` | Post threaded replies (the LangGraph bot) |
+| `channels:join` | Bot can join public channels |
+
+> **Note:** Free/Pro plans do not allow `channels:manage` or
+> `groups:write` (Slack shows "only available to Enterprise
+> customers"). The bot cannot auto-create channels on free plans —
+> you create them manually in Step 5 below.
+
+#### Enterprise Grid workspace
 
 | Scope | Why |
 |---|---|
 | `channels:manage` | Create and archive public channels |
-| `channels:read` | List channels to check if they already exist |
+| `channels:read` | List channels |
 | `groups:write` | Create and archive private channels |
 | `groups:read` | List private channels |
 | `chat:write` | Post threaded replies (the LangGraph bot) |
+
+> With Enterprise scopes, `npm run setup:slack:channels` auto-creates
+> all 4 channels via the Slack API.
 
 ### Step 3 — Install to workspace
 
@@ -469,6 +490,8 @@ echo "SLACK_BOT_TOKEN=xoxb-your-token-here" >> .env
 
 ### Step 5 — Create the channels
 
+#### Enterprise plan (auto-create)
+
 ```bash
 npm run setup:slack:channels
 ```
@@ -476,20 +499,34 @@ npm run setup:slack:channels
 Output:
 
 ```
-Fetching existing channels...
-  Found 12 existing channels
-
 Processing 4 channel(s):
   CREATED #in-home-help-field-officers (C07XXXXXXXX)
   CREATED #in-home-help-customer-support (C07XXXXXXXX)
   CREATED #in-home-help-product-owners (C07XXXXXXXX)
   CREATED #in-home-help-customers (C07XXXXXXXX)
-
 Done. 4/4 channels ready.
 ```
 
-The script is **idempotent** — run it again and it skips existing
-channels (prints `EXISTS` instead of `CREATED`).
+#### Free / Pro plan (manual create — 30 seconds)
+
+Create each channel manually in Slack:
+
+1. Click **"+"** next to "Channels" in the sidebar
+2. Create these 4 channels:
+   - `in-home-help-field-officers`
+   - `in-home-help-customer-support`
+   - `in-home-help-product-owners`
+   - `in-home-help-customers`
+3. Invite the bot to each channel — type in each channel:
+   ```
+   /invite @In-Home-Care Bot
+   ```
+
+Then verify:
+
+```bash
+npm run status:slack:channels
+```
 
 ### Check channel status
 
@@ -498,15 +535,20 @@ npm run status:slack:channels
 ```
 
 Shows ACTIVE / ARCHIVED / NOT FOUND for each channel plus member count.
+Works on **all Slack plans** (only needs `channels:read`).
 
 ### Tear down channels
+
+**Enterprise plan:**
 
 ```bash
 npm run teardown:slack:channels
 ```
 
-Archives (soft-deletes) all four channels. They can be unarchived from
-the Slack UI if needed.
+Archives (soft-deletes) all four channels.
+
+**Free / Pro plan:** archive channels manually from Slack (right-click
+channel → "Archive channel").
 
 ### Adding or renaming channels
 
