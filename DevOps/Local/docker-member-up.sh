@@ -14,4 +14,7 @@ docker compose -f "$DIR/Kafka/docker-compose.yml" up -d
 echo "=== Postgres ==="
 docker compose -f "$DIR/Postgres/docker-compose.yml" up -d
 
+echo "=== Waiting for Postgres to accept queries ==="
+bash "$DIR/wait-for-postgres.sh"
+
 echo "Member-stack Docker containers up on network: in-home-care-network"

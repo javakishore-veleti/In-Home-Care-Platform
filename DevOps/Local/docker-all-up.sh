@@ -28,4 +28,7 @@ echo "=== Observability ==="
 echo "=== Airflow ==="
 # docker compose -f "$DIR/Airflow/docker-compose.yml" up -d
 
+echo "=== Waiting for Postgres to accept queries ==="
+bash "$DIR/wait-for-postgres.sh"
+
 echo "All stacks up on network: in-home-care-network"

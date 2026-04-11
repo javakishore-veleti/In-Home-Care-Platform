@@ -8,12 +8,30 @@ services:
     environment:
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
-      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
-      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+      # Single-node KRaft: the controller votes for itself on localhost.
+      # The previous value `1@kafka:9093` referenced a hostname that did
+      # not resolve inside the container, which combined with the missing
+      # KAFKA_INTER_BROKER_LISTENER_NAME made Kafka derive
+      # advertised.listeners from KAFKA_LISTENERS (PLAINTEXT://0.0.0.0:9092)
+      # and reject startup with the "advertised.listeners cannot use the
+      # nonroutable meta-address 0.0.0.0" error.
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
+      # Empty host = bind all interfaces. We deliberately do NOT use the
+      # literal 0.0.0.0 here because apache/kafka:3.9.0's format step
+      # rejects 0.0.0.0 as a meta-address even when it appears only in
+      # the listeners side, not advertised.listeners.
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      # Pin the inter-broker listener so Kafka does not fall back to
+      # auto-derivation from KAFKA_LISTENERS (which would pick up the
+      # 0.0.0.0 address and fail validation).
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
       CLUSTER_ID: "in-home-care-local-cluster"
     volumes:
       - kafka-data:/var/lib/kafka/data
