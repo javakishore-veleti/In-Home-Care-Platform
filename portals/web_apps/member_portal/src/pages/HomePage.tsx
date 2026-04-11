@@ -1,45 +1,88 @@
 import { Link } from 'react-router-dom'
 
+import { HomeCareIllustration } from '../components/CareVisuals'
+
 export function HomePage() {
   return (
     <div className="home-page">
       <section className="hero-panel">
-        <div>
+        <div className="hero-intro">
           <p className="eyebrow">Member portal</p>
-          <h1>Compassionate care, coordinated beautifully from home.</h1>
+          <h1 className="home-hero-title">Manage home-care appointments and member details in one place.</h1>
           <p className="hero-copy">
-            Manage care appointments, review visit follow-ups, update service addresses,
-            and message a concierge-style assistant built for members.
+            This is a working member experience for everyday care coordination: profile settings, saved addresses,
+            appointment booking, visit detail review, and guided support after sign-in.
           </p>
           <div className="hero-actions">
             <Link className="primary-button" to="/signup">Create account</Link>
             <Link className="secondary-button" to="/signin">Sign in</Link>
           </div>
+          <div className="hero-metrics">
+            <div className="metric-card">
+              <strong>Book care</strong>
+              <span>Use saved service addresses</span>
+            </div>
+            <div className="metric-card">
+              <strong>Track progress</strong>
+              <span>Visits, notes, and action items</span>
+            </div>
+            <div className="metric-card">
+              <strong>Get help</strong>
+              <span>Chat after sign-in</span>
+            </div>
+          </div>
         </div>
         <div className="hero-summary card accent-card">
-          <h2>What members can do</h2>
+          <p className="eyebrow">Portal walkthrough</p>
+          <h2>What the member workspace helps you handle</h2>
+          <HomeCareIllustration />
           <ul className="feature-list">
-            <li>Book appointments using a saved address</li>
-            <li>Search and page through appointment history</li>
-            <li>Review visit documents, notes, decisions, and actions</li>
-            <li>Manage profile settings and multiple service locations</li>
-            <li>Chat with a helpful care concierge assistant</li>
+            <li className="feature-item feature-item-light">
+              <strong>Request care</strong>
+              <span>Choose a saved service location and preferred time window.</span>
+            </li>
+            <li className="feature-item feature-item-light">
+              <strong>Review follow-up</strong>
+              <span>See visit documents, notes, decisions, and action items together.</span>
+            </li>
+            <li className="feature-item feature-item-light">
+              <strong>Stay organized</strong>
+              <span>Keep profile settings, addresses, and support chat connected.</span>
+            </li>
           </ul>
         </div>
       </section>
 
       <section className="home-grid">
-        <article className="card">
-          <h3>Trusted scheduling</h3>
-          <p>Request new care with flexible service areas, preferred time windows, and clear visit context.</p>
+        <article className="card info-card">
+          <p className="card-kicker">Scheduling workflow</p>
+          <h3>Structured appointment intake</h3>
+          <p>Request care with the core details operations teams actually need before confirming in-home service.</p>
+          <ul className="card-list">
+            <li>Saved service address selection</li>
+            <li>Preferred date and time window</li>
+            <li>Reason for care and member notes</li>
+          </ul>
         </article>
-        <article className="card">
-          <h3>Clear follow-up</h3>
-          <p>Each appointment detail page keeps visits, documents, notes, decisions, and action items together.</p>
+        <article className="card info-card">
+          <p className="card-kicker">Visit visibility</p>
+          <h3>Clinical follow-up in context</h3>
+          <p>Each appointment becomes a single review surface for related visits and the artifacts created after care is delivered.</p>
+          <ul className="card-list">
+            <li>Visit summaries and documents</li>
+            <li>Decisions and action items</li>
+            <li>Notes without leaving the appointment view</li>
+          </ul>
         </article>
-        <article className="card">
-          <h3>Member-first design</h3>
-          <p>Built to feel calm, modern, and reassuring for healthcare journeys that need clarity.</p>
+        <article className="card info-card">
+          <p className="card-kicker">Account readiness</p>
+          <h3>Member profile and location management</h3>
+          <p>Keep household details current so repeat booking, service coordination, and support interactions stay consistent.</p>
+          <ul className="card-list">
+            <li>Multiple saved addresses</li>
+            <li>Default service location</li>
+            <li>Profile settings and guided support</li>
+          </ul>
         </article>
       </section>
     </div>

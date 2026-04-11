@@ -38,10 +38,11 @@ export function ChatPage() {
         <div>
           <p className="eyebrow">Care concierge</p>
           <h2>Chat with a guided assistant</h2>
+          <p className="muted">Use chat for appointment questions, visit follow-up, or navigating your member account.</p>
         </div>
       </div>
       <div className="chat-thread">
-        {messages.length === 0 ? <div className="subcard">Ask about appointments, visits, or managing your saved service addresses.</div> : null}
+        {messages.length === 0 ? <div className="subcard">Ask about appointments, visits, saved service addresses, or how to find the latest follow-up details.</div> : null}
         {messages.map((message) => (
           <div key={message.id} className={`chat-bubble ${message.role}`}>
             <strong>{message.role === 'assistant' ? 'Assistant' : 'You'}</strong>

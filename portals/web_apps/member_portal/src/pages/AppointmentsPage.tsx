@@ -21,6 +21,8 @@ export function AppointmentsPage() {
 
   const query = searchParams.get('query') ?? ''
   const page = Number(searchParams.get('page') ?? '1')
+  const scheduledCount = data.items.filter((appointment) => appointment.status === 'scheduled' || appointment.status === 'pending').length
+  const completedCount = data.items.filter((appointment) => appointment.status === 'completed').length
 
   useEffect(() => {
     if (!token) return
@@ -31,11 +33,26 @@ export function AppointmentsPage() {
 
   return (
     <div className="stack-xl">
+      <div className="stats-strip compact">
+        <div className="metric-card">
+          <strong>{data.total}</strong>
+          <span>Total appointments</span>
+        </div>
+        <div className="metric-card">
+          <strong>{scheduledCount}</strong>
+          <span>Open requests</span>
+        </div>
+        <div className="metric-card">
+          <strong>{completedCount}</strong>
+          <span>Completed</span>
+        </div>
+      </div>
       <section className="card stack-md">
         <div className="section-heading">
           <div>
             <p className="eyebrow">Appointments</p>
             <h2>Search and review your care requests</h2>
+            <p className="muted">Use search and pagination to quickly find past or upcoming requests.</p>
           </div>
           <Link className="primary-button" to="/app/appointments/new">Book appointment</Link>
         </div>

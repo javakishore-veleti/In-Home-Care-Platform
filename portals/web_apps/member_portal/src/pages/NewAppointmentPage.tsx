@@ -48,6 +48,7 @@ export function NewAppointmentPage() {
         <div>
           <p className="eyebrow">Book care</p>
           <h2>Request a new in-home appointment</h2>
+          <p className="muted">Choose a saved address, confirm the service window, and add useful context for the care team.</p>
         </div>
         <Link className="secondary-button" to="/app/profile">Manage addresses</Link>
       </div>

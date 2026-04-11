@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from 'react-router-dom'
+import { Link, Navigate, Route, Routes } from 'react-router-dom'
 
 import { AppShell } from './components/AppShell'
 import { ProtectedRoute } from './components/ProtectedRoute'
@@ -39,9 +39,19 @@ function PublicLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="public-shell">
       <header className="public-header">
-        <div>
-          <p className="eyebrow">In-Home Care</p>
-          <h1>Member experience</h1>
+        <div className="public-header-bar">
+          <div className="public-brand">
+            <div className="public-brand-mark">IH</div>
+            <div className="public-brand-copy">
+              <p className="eyebrow">In-Home Care</p>
+              <p className="public-brand-title">Member portal</p>
+            </div>
+          </div>
+          <nav className="public-nav">
+            <Link to="/">Home</Link>
+            <Link to="/signin">Sign in</Link>
+            <Link className="primary-button" to="/signup">Create account</Link>
+          </nav>
         </div>
       </header>
       <main className="public-main">{children}</main>
