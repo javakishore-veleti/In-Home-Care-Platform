@@ -41,8 +41,9 @@ export function AppShell() {
               key={item.to}
               to={item.to}
               end={item.end}
+              style={{ color: '#ffffff', textDecoration: 'none' }}
               className={({ isActive }) =>
-                `block w-full text-left px-3 py-2 rounded font-medium text-sm text-white no-underline visited:text-white hover:text-white ${
+                `block w-full text-left px-3 py-2 rounded font-medium text-sm ${
                   isActive ? 'bg-[#084C4F]' : 'hover:bg-[#084C4F]/70'
                 }`
               }

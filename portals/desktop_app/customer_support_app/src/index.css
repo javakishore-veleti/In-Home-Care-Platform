@@ -20,8 +20,10 @@ body {
   color: var(--color-text);
 }
 
-a { color: var(--color-info); }
-a:hover { color: var(--color-primary); }
+/* Default <a> to inherit so nav links inside dark sidebars/headers
+   stay readable. Anchors that genuinely need the link-blue colour can
+   opt in with `text-[var(--color-info)]` per element. */
+a { color: inherit; text-decoration: none; }
 
 input,
 textarea,
