@@ -322,44 +322,55 @@ class AppointmentStore(BaseStore):
         # Make sure the appointment exists (raises 404 otherwise).
         self.get_appointment(appointment_id)
         if self.using_db:
-            existing = self.fetch_one(
-                'SELECT id, appointment_id, slack_user_id, slack_user_name, claimed_at '
-                'FROM appointment_schema.appointment_claims WHERE appointment_id = %s',
-                (appointment_id,),
-            )
-            if existing:
-                return {
-                    'appointment': self.get_appointment(appointment_id),
-                    'claim': existing,
-                    'already_claimed': True,
-                }
-            claim = self.fetch_one(
-                '''
-                INSERT INTO appointment_schema.appointment_claims (
-                    appointment_id, slack_user_id, slack_user_name, slack_team_id,
-                    slack_channel_id, slack_message_ts
+            # The INSERT into appointment_claims and the UPDATE that bumps
+            # appointments.status='claimed' must commit together. If the
+            # INSERT lands but the UPDATE is lost (process crash, network
+            # blip), the second click would short-circuit on the existing
+            # claim and the status would silently stay 'requested'. One
+            # transaction makes "claim row exists" an exact synonym for
+            # "appointment is claimed".
+            with self.with_transaction() as cur:
+                cur.execute(
+                    'SELECT id, appointment_id, slack_user_id, slack_user_name, claimed_at '
+                    'FROM appointment_schema.appointment_claims WHERE appointment_id = %s '
+                    'FOR UPDATE',
+                    (appointment_id,),
                 )
-                VALUES (%s, %s, %s, %s, %s, %s)
-                RETURNING id, appointment_id, slack_user_id, slack_user_name, slack_team_id,
-                          slack_channel_id, slack_message_ts, claimed_at
-                ''',
-                (
-                    appointment_id,
-                    slack_user_id,
-                    slack_user_name,
-                    slack_team_id,
-                    slack_channel_id,
-                    slack_message_ts,
-                ),
-            )
-            self.execute(
-                '''
-                UPDATE appointment_schema.appointments
-                SET status = 'claimed', updated_at = %s
-                WHERE id = %s
-                ''',
-                (now_utc(), appointment_id),
-            )
+                existing = cur.fetchone()
+                if existing:
+                    return {
+                        'appointment': self.get_appointment(appointment_id),
+                        'claim': existing,
+                        'already_claimed': True,
+                    }
+                cur.execute(
+                    '''
+                    INSERT INTO appointment_schema.appointment_claims (
+                        appointment_id, slack_user_id, slack_user_name, slack_team_id,
+                        slack_channel_id, slack_message_ts
+                    )
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                    RETURNING id, appointment_id, slack_user_id, slack_user_name, slack_team_id,
+                              slack_channel_id, slack_message_ts, claimed_at
+                    ''',
+                    (
+                        appointment_id,
+                        slack_user_id,
+                        slack_user_name,
+                        slack_team_id,
+                        slack_channel_id,
+                        slack_message_ts,
+                    ),
+                )
+                claim = cur.fetchone()
+                cur.execute(
+                    '''
+                    UPDATE appointment_schema.appointments
+                    SET status = 'claimed', updated_at = %s
+                    WHERE id = %s
+                    ''',
+                    (now_utc(), appointment_id),
+                )
             return {
                 'appointment': self.get_appointment(appointment_id),
                 'claim': claim,

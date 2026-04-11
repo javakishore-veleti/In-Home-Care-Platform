@@ -4,8 +4,9 @@ import copy
 import os
 import threading
 from collections import defaultdict
+from contextlib import contextmanager
 from datetime import date, datetime, timezone
-from typing import Any, Callable, Iterable
+from typing import Any, Callable, Iterable, Iterator
 
 try:
     import psycopg
@@ -143,6 +144,28 @@ class BaseStore:
         with psycopg.connect(get_database_url(), row_factory=dict_row, connect_timeout=1) as conn:
             with conn.cursor() as cur:
                 cur.execute(query, tuple(params))
+
+    @contextmanager
+    def with_transaction(self) -> 'Iterator[Any]':
+        """Yield a cursor inside a single connection so multi-statement
+        flows commit or roll back atomically.
+
+        Use ``cur.execute(...)`` for writes and ``cur.fetchone()`` /
+        ``cur.fetchall()`` for reads — the cursor is the same one for the
+        whole block. The psycopg ``with conn`` block commits on success
+        and rolls back on any exception, so a failure mid-block leaves the
+        DB exactly as it was before the block started.
+        """
+        if not self.using_db:
+            # Memory backend has no real transactions; the contextmanager
+            # still has to yield something so callers can branch on
+            # ``self.using_db`` instead of branching on whether the cursor
+            # exists.
+            yield None
+            return
+        with psycopg.connect(get_database_url(), row_factory=dict_row, connect_timeout=1) as conn:
+            with conn.cursor() as cur:
+                yield cur
 
     def _memory_key(self, name: str) -> str:
         return f'{self.memory_namespace}.{name}'
