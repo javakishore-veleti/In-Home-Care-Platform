@@ -1,0 +1,24 @@
+{
+  "channels": [
+    {
+      "name": "in-home-help-field-officers",
+      "purpose": "AI-assisted back-office for field staff — post questions about visits, care plans, scheduling. The LangGraph bot replies with grounded answers.",
+      "topic": "Field officers help channel — bot-assisted"
+    },
+    {
+      "name": "in-home-help-customer-support",
+      "purpose": "AI-assisted back-office for customer support agents — dispute resolution, member lookup, policy questions. The LangGraph bot replies with cited answers.",
+      "topic": "Customer support help channel — bot-assisted"
+    },
+    {
+      "name": "in-home-help-product-owners",
+      "purpose": "AI-assisted channel for product owners — metrics, feature requests, ops questions. The LangGraph bot pulls from dashboards and documentation.",
+      "topic": "Product owners help channel — bot-assisted"
+    },
+    {
+      "name": "in-home-help-customers",
+      "purpose": "AI-assisted channel for member/customer inquiries — appointment status, visit history, care plan questions. The LangGraph bot replies with grounded answers from the member record.",
+      "topic": "Customer help channel — bot-assisted"
+    }
+  ]
+}

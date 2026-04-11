@@ -45,6 +45,10 @@
     "local:stop-all": "npm run local:portals:stop-all && npm run local:middleware:stop-all && npm run setup:local:docker:down",
     "local:status-all": "npm run setup:local:docker:status && npm run local:middleware:status-all && npm run local:portals:status-all",
 
+    "setup:slack:channels": "python3 DevOps/Slack/create_channels.py",
+    "status:slack:channels": "python3 DevOps/Slack/status_channels.py",
+    "teardown:slack:channels": "python3 DevOps/Slack/delete_channels.py",
+
     "test": "bash -c '$HOME/runtime_data/python_venvs/In-Home-Care-Platform/bin/python -m pytest -q'",
     "test:middleware": "bash -c '$HOME/runtime_data/python_venvs/In-Home-Care-Platform/bin/python -m pytest middleware/ -q'",
     "lint": "bash -c '$HOME/runtime_data/python_venvs/In-Home-Care-Platform/bin/python -m ruff check .'",
