@@ -338,6 +338,113 @@ npm run teardown:local:all            # stop everything + delete the conda venv
 | `test:middleware` | `pytest middleware/` only |
 | `lint` | `ruff check .` |
 | `teardown:local:all` | Stop all + destroy venv |
+| `setup:slack:channels` | Create all 4 Slack channels |
+| `status:slack:channels` | Check Slack channel status |
+| `teardown:slack:channels` | Archive all 4 Slack channels |
+
+## Slack integration — setup + credentials
+
+The platform uses four Slack channels for AI-assisted back-office
+support. The LangGraph `slack_channel_responder_flow` watches these
+channels, answers questions with grounded context, and replies
+in-thread.
+
+### Channels
+
+| Channel | Persona |
+|---|---|
+| `#in-home-help-field-officers` | Field staff |
+| `#in-home-help-customer-support` | Customer support agents |
+| `#in-home-help-product-owners` | Product owners |
+| `#in-home-help-customers` | Members / patients |
+
+### Step 1 — Create a Slack app
+
+1. Go to https://api.slack.com/apps
+2. Click **Create New App** → **From scratch**
+3. App name: `In-Home-Care Bot`
+4. Pick your workspace → **Create App**
+
+### Step 2 — Add bot token scopes
+
+Go to **OAuth & Permissions** → scroll to **Scopes** → under **Bot
+Token Scopes** add:
+
+| Scope | Why |
+|---|---|
+| `channels:manage` | Create and archive public channels |
+| `channels:read` | List channels to check if they already exist |
+| `groups:write` | Create and archive private channels |
+| `groups:read` | List private channels |
+| `chat:write` | Post threaded replies (the LangGraph bot) |
+
+### Step 3 — Install to workspace
+
+Click **Install to Workspace** → **Allow**. You'll get a **Bot User
+OAuth Token** that starts with `xoxb-`.
+
+### Step 4 — Export the token
+
+```bash
+export SLACK_BOT_TOKEN=xoxb-your-token-here
+```
+
+For GitHub Actions, add `SLACK_BOT_TOKEN` as a **repo secret**
+(Settings → Secrets and variables → Actions → New repository secret).
+
+The token is **never committed** to the repo. The `.gitignore` already
+excludes `.env` files. If you prefer a `.env` file locally:
+
+```bash
+echo "SLACK_BOT_TOKEN=xoxb-your-token-here" >> .env
+```
+
+### Step 5 — Create the channels
+
+```bash
+npm run setup:slack:channels
+```
+
+Output:
+
+```
+Fetching existing channels...
+  Found 12 existing channels
+
+Processing 4 channel(s):
+  CREATED #in-home-help-field-officers (C07XXXXXXXX)
+  CREATED #in-home-help-customer-support (C07XXXXXXXX)
+  CREATED #in-home-help-product-owners (C07XXXXXXXX)
+  CREATED #in-home-help-customers (C07XXXXXXXX)
+
+Done. 4/4 channels ready.
+```
+
+The script is **idempotent** — run it again and it skips existing
+channels (prints `EXISTS` instead of `CREATED`).
+
+### Check channel status
+
+```bash
+npm run status:slack:channels
+```
+
+Shows ACTIVE / ARCHIVED / NOT FOUND for each channel plus member count.
+
+### Tear down channels
+
+```bash
+npm run teardown:slack:channels
+```
+
+Archives (soft-deletes) all four channels. They can be unarchived from
+the Slack UI if needed.
+
+### Adding or renaming channels
+
+Edit `DevOps/Slack/channels.json` — add, remove, or rename entries —
+then re-run `npm run setup:slack:channels`. The script reads from that
+file every time.
 
 ## Status
 
