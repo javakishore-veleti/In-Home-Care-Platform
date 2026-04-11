@@ -20,6 +20,13 @@ def create_app() -> FastAPI:
     except Exception as exc:  # pragma: no cover
         print(f'[auth_svc] auto-migrate warning: {exc}')
 
+    try:
+        from .seed import seed_internal_users
+
+        seed_internal_users()
+    except Exception as exc:  # pragma: no cover
+        print(f'[auth_svc] internal-user seed warning: {exc}')
+
     application = FastAPI(title='auth_svc', version='0.1.0')
     application.include_router(router)
 

@@ -17,7 +17,7 @@ from visit_management_svc.schemas import (
 )
 
 from .dependencies import (
-    CurrentSession,
+    CurrentMemberSession,
     get_appointment_client,
     get_chat_store,
     get_member_store,
@@ -58,23 +58,23 @@ class ChatThreadResponse(BaseModel):
 
 
 @router.get('/profile', response_model=MemberProfile)
-def get_profile(session: CurrentSession) -> MemberProfile:
+def get_profile(session: CurrentMemberSession) -> MemberProfile:
     return MemberProfile(**session.member)
 
 
 @router.patch('/profile', response_model=MemberProfile)
-def update_profile(payload: MemberUpdate, session: CurrentSession, member_store=Depends(get_member_store)) -> MemberProfile:
+def update_profile(payload: MemberUpdate, session: CurrentMemberSession, member_store=Depends(get_member_store)) -> MemberProfile:
     return MemberProfile(**member_store.update_member(session.member['id'], payload))
 
 
 @router.get('/addresses', response_model=list[AddressResponse])
-def list_addresses(session: CurrentSession, member_store=Depends(get_member_store)) -> list[AddressResponse]:
+def list_addresses(session: CurrentMemberSession, member_store=Depends(get_member_store)) -> list[AddressResponse]:
     return [AddressResponse(**row) for row in member_store.list_addresses(session.member['id'])]
 
 
 @router.get('/address-directory', response_model=AddressListResponse)
 def search_addresses(
-    session: CurrentSession,
+    session: CurrentMemberSession,
     query: str | None = None,
     page: int = 1,
     page_size: int = 10,
@@ -86,29 +86,29 @@ def search_addresses(
 
 
 @router.post('/addresses', response_model=AddressResponse, status_code=status.HTTP_201_CREATED)
-def create_address(payload: AddressCreate, session: CurrentSession, member_store=Depends(get_member_store)) -> AddressResponse:
+def create_address(payload: AddressCreate, session: CurrentMemberSession, member_store=Depends(get_member_store)) -> AddressResponse:
     return AddressResponse(**member_store.create_address(session.member['id'], payload))
 
 
 @router.patch('/addresses/{address_id}', response_model=AddressResponse)
-def update_address(address_id: int, payload: AddressUpdate, session: CurrentSession, member_store=Depends(get_member_store)) -> AddressResponse:
+def update_address(address_id: int, payload: AddressUpdate, session: CurrentMemberSession, member_store=Depends(get_member_store)) -> AddressResponse:
     return AddressResponse(**member_store.update_address(session.member['id'], address_id, payload))
 
 
 @router.delete('/addresses/{address_id}', status_code=status.HTTP_204_NO_CONTENT)
-def delete_address(address_id: int, session: CurrentSession, member_store=Depends(get_member_store)) -> None:
+def delete_address(address_id: int, session: CurrentMemberSession, member_store=Depends(get_member_store)) -> None:
     member_store.delete_address(session.member['id'], address_id)
 
 
 @router.patch('/addresses/{address_id}/default', response_model=AddressResponse)
-def set_default_address(address_id: int, session: CurrentSession, member_store=Depends(get_member_store)) -> AddressResponse:
+def set_default_address(address_id: int, session: CurrentMemberSession, member_store=Depends(get_member_store)) -> AddressResponse:
     return AddressResponse(**member_store.set_default_address(session.member['id'], address_id))
 
 
 @router.post('/appointments', response_model=AppointmentResponse, status_code=status.HTTP_201_CREATED)
 def create_appointment(
     payload: MemberAppointmentCreate,
-    session: CurrentSession,
+    session: CurrentMemberSession,
     appointment_client=Depends(get_appointment_client),
     member_store=Depends(get_member_store),
 ) -> AppointmentResponse:
@@ -125,7 +125,7 @@ def create_appointment(
 
 @router.get('/appointments', response_model=AppointmentListResponse)
 def list_appointments(
-    session: CurrentSession,
+    session: CurrentMemberSession,
     query: str | None = None,
     service_type: str | None = None,
     page: int = 1,
@@ -144,7 +144,7 @@ def list_appointments(
 
 
 @router.get('/appointments/{appointment_id}', response_model=AppointmentResponse)
-def get_appointment(appointment_id: int, session: CurrentSession, appointment_client=Depends(get_appointment_client)) -> AppointmentResponse:
+def get_appointment(appointment_id: int, session: CurrentMemberSession, appointment_client=Depends(get_appointment_client)) -> AppointmentResponse:
     appointment = appointment_client.get_appointment(appointment_id)
     _ensure_appointment_owner(appointment, session.member['id'])
     return AppointmentResponse(**appointment)
@@ -154,7 +154,7 @@ def get_appointment(appointment_id: int, session: CurrentSession, appointment_cl
 def update_appointment(
     appointment_id: int,
     payload: AppointmentUpdate,
-    session: CurrentSession,
+    session: CurrentMemberSession,
     appointment_client=Depends(get_appointment_client),
 ) -> AppointmentResponse:
     appointment = appointment_client.get_appointment(appointment_id)
@@ -165,7 +165,7 @@ def update_appointment(
 @router.post('/appointments/{appointment_id}/cancel', response_model=AppointmentResponse)
 def cancel_appointment(
     appointment_id: int,
-    session: CurrentSession,
+    session: CurrentMemberSession,
     appointment_client=Depends(get_appointment_client),
 ) -> AppointmentResponse:
     appointment = appointment_client.get_appointment(appointment_id)
@@ -176,7 +176,7 @@ def cancel_appointment(
 @router.get('/appointments/{appointment_id}/visits', response_model=list[VisitResponse])
 def list_visits(
     appointment_id: int,
-    session: CurrentSession,
+    session: CurrentMemberSession,
     appointment_client=Depends(get_appointment_client),
     visit_store=Depends(get_visit_store),
 ) -> list[VisitResponse]:
@@ -186,42 +186,42 @@ def list_visits(
 
 
 @router.get('/visits/{visit_id}', response_model=VisitResponse)
-def get_visit(visit_id: int, session: CurrentSession, visit_store=Depends(get_visit_store)) -> VisitResponse:
+def get_visit(visit_id: int, session: CurrentMemberSession, visit_store=Depends(get_visit_store)) -> VisitResponse:
     visit = visit_store.get_visit(visit_id)
     _ensure_visit_owner(visit, session.member['id'])
     return VisitResponse(**visit)
 
 
 @router.get('/visits/{visit_id}/documents', response_model=list[VisitDocumentResponse])
-def list_visit_documents(visit_id: int, session: CurrentSession, visit_store=Depends(get_visit_store)) -> list[VisitDocumentResponse]:
+def list_visit_documents(visit_id: int, session: CurrentMemberSession, visit_store=Depends(get_visit_store)) -> list[VisitDocumentResponse]:
     visit = visit_store.get_visit(visit_id)
     _ensure_visit_owner(visit, session.member['id'])
     return [VisitDocumentResponse(**row) for row in visit_store.list_documents(visit_id)]
 
 
 @router.get('/visits/{visit_id}/notes', response_model=list[VisitNoteResponse])
-def list_visit_notes(visit_id: int, session: CurrentSession, visit_store=Depends(get_visit_store)) -> list[VisitNoteResponse]:
+def list_visit_notes(visit_id: int, session: CurrentMemberSession, visit_store=Depends(get_visit_store)) -> list[VisitNoteResponse]:
     visit = visit_store.get_visit(visit_id)
     _ensure_visit_owner(visit, session.member['id'])
     return [VisitNoteResponse(**row) for row in visit_store.list_notes(visit_id)]
 
 
 @router.get('/visits/{visit_id}/decisions', response_model=list[VisitDecisionResponse])
-def list_visit_decisions(visit_id: int, session: CurrentSession, visit_store=Depends(get_visit_store)) -> list[VisitDecisionResponse]:
+def list_visit_decisions(visit_id: int, session: CurrentMemberSession, visit_store=Depends(get_visit_store)) -> list[VisitDecisionResponse]:
     visit = visit_store.get_visit(visit_id)
     _ensure_visit_owner(visit, session.member['id'])
     return [VisitDecisionResponse(**row) for row in visit_store.list_decisions(visit_id)]
 
 
 @router.get('/visits/{visit_id}/action-items', response_model=list[VisitActionItemResponse])
-def list_visit_action_items(visit_id: int, session: CurrentSession, visit_store=Depends(get_visit_store)) -> list[VisitActionItemResponse]:
+def list_visit_action_items(visit_id: int, session: CurrentMemberSession, visit_store=Depends(get_visit_store)) -> list[VisitActionItemResponse]:
     visit = visit_store.get_visit(visit_id)
     _ensure_visit_owner(visit, session.member['id'])
     return [VisitActionItemResponse(**row) for row in visit_store.list_action_items(visit_id)]
 
 
 @router.get('/chat/messages', response_model=ChatThreadResponse)
-def list_chat_messages(session: CurrentSession, chat_store=Depends(get_chat_store)) -> ChatThreadResponse:
+def list_chat_messages(session: CurrentMemberSession, chat_store=Depends(get_chat_store)) -> ChatThreadResponse:
     messages = [ChatMessageResponse(**row) for row in chat_store.list_messages(session.member['id'])]
     return ChatThreadResponse(messages=messages)
 
@@ -229,7 +229,7 @@ def list_chat_messages(session: CurrentSession, chat_store=Depends(get_chat_stor
 @router.post('/chat/messages', response_model=ChatThreadResponse)
 def send_chat_message(
     payload: ChatMessageCreate,
-    session: CurrentSession,
+    session: CurrentMemberSession,
     chat_store=Depends(get_chat_store),
     appointment_client=Depends(get_appointment_client),
 ) -> ChatThreadResponse:

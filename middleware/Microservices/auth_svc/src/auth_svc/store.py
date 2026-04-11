@@ -121,6 +121,62 @@ class AuthStore(BaseStore):
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='User not found for token.')
         return self._public_user(user)
 
+    def ensure_internal_user(self, *, email: str, password: str, role: str) -> dict[str, Any]:
+        """Idempotently create an internal-staff user with a chosen role.
+
+        Used by the auth_svc startup seeding flow. Existing rows are left
+        untouched so a deployer can override the password by deleting the
+        row, and so a re-seed never overwrites local edits.
+        """
+        existing = self.get_user_by_email(email)
+        if existing:
+            return self._public_user(existing)
+        normalized_email = email.lower()
+        if self.using_db:
+            row = self.fetch_one(
+                '''
+                INSERT INTO auth_schema.users (email, hashed_password, role, is_active, created_at)
+                VALUES (%s, %s, %s, TRUE, %s)
+                RETURNING id, email, role, is_active, created_at
+                ''',
+                (normalized_email, hash_password(password), role, now_utc()),
+            )
+            assert row is not None
+            return row
+        inserted = self.memory.insert(
+            self._memory_key('users'),
+            {
+                'email': normalized_email,
+                'hashed_password': hash_password(password),
+                'role': role,
+                'is_active': True,
+                'created_at': now_utc(),
+            },
+        )
+        return self._public_user(inserted)
+
+    def list_users_by_roles(self, roles: list[str]) -> list[dict[str, Any]]:
+        """Return public-shape users for any of the given roles."""
+        if not roles:
+            return []
+        if self.using_db:
+            placeholders = ', '.join(['%s'] * len(roles))
+            rows = self.fetch_all(
+                f'''
+                SELECT id, email, role, is_active, created_at
+                FROM auth_schema.users
+                WHERE role IN ({placeholders})
+                ORDER BY role, email
+                ''',
+                tuple(roles),
+            )
+            return rows
+        return [
+            self._public_user(row)
+            for row in self.memory.list(self._memory_key('users'))
+            if row.get('role') in roles
+        ]
+
     @staticmethod
     def _public_user(user: dict[str, Any]) -> dict[str, Any]:
         return {

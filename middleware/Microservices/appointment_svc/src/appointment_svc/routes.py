@@ -58,6 +58,20 @@ def list_appointments(
     return AppointmentListResponse(**data)
 
 
+@router.get('/appointments/all', response_model=AppointmentListResponse)
+def list_all_appointments(
+    query: str | None = None,
+    status_filter: str | None = None,
+    page: int = 1,
+    page_size: int = 20,
+    store: AppointmentStore = Depends(get_store),
+) -> AppointmentListResponse:
+    """Cross-member listing for admin/support — never gated by member_id."""
+    data = store.list_all_appointments(query=query, status_filter=status_filter, page=page, page_size=page_size)
+    data['items'] = [AppointmentResponse(**row) for row in data['items']]
+    return AppointmentListResponse(**data)
+
+
 @router.get('/appointments/{appointment_id}', response_model=AppointmentResponse)
 def get_appointment(appointment_id: int, store: AppointmentStore = Depends(get_store)) -> AppointmentResponse:
     return AppointmentResponse(**store.get_appointment(appointment_id))

@@ -6,9 +6,14 @@ from pydantic import BaseModel
 from auth_svc.schemas import AuthResponse, SigninRequest, SignupRequest
 from member_svc.schemas import MemberCreate, MemberProfile
 
-from .dependencies import CurrentSession, ensure_member_for_user, get_auth_store, get_member_store
+from .dependencies import (
+    CurrentSession,
+    ensure_member_for_user,
+    get_auth_store,
+    get_member_store,
+)
 
-router = APIRouter(prefix='/api/auth', tags=['member-auth'])
+router = APIRouter(prefix='/api/auth', tags=['auth'])
 
 
 class GatewaySignupResponse(BaseModel):
@@ -17,16 +22,22 @@ class GatewaySignupResponse(BaseModel):
 
 
 class GatewaySessionResponse(AuthResponse):
-    member: MemberProfile
+    member: MemberProfile | None = None
 
 
 class GatewayMeResponse(BaseModel):
     user: dict
-    member: MemberProfile
+    member: MemberProfile | None = None
+
+
+def _is_member_role(user: dict) -> bool:
+    return (user.get('role') or 'member') == 'member'
 
 
 @router.post('/signup', response_model=GatewaySignupResponse, status_code=status.HTTP_201_CREATED)
 def signup(payload: SignupRequest, auth_store=Depends(get_auth_store), member_store=Depends(get_member_store)) -> GatewaySignupResponse:
+    """Public sign-up creates a member account. Internal-staff users are seeded
+    by auth_svc on startup, not via this route."""
     user = auth_store.create_user(payload)
     member = member_store.create_member(
         MemberCreate(
@@ -43,10 +54,15 @@ def signup(payload: SignupRequest, auth_store=Depends(get_auth_store), member_st
 @router.post('/signin', response_model=GatewaySessionResponse)
 def signin(payload: SigninRequest, auth_store=Depends(get_auth_store)) -> GatewaySessionResponse:
     session = auth_store.signin(payload)
-    member = ensure_member_for_user(session['user'])
-    return GatewaySessionResponse(**session, member=MemberProfile(**member))
+    member: MemberProfile | None = None
+    if _is_member_role(session['user']):
+        member = MemberProfile(**ensure_member_for_user(session['user']))
+    return GatewaySessionResponse(**session, member=member)
 
 
 @router.get('/me', response_model=GatewayMeResponse)
 def me(session: CurrentSession) -> GatewayMeResponse:
-    return GatewayMeResponse(user=session.user, member=MemberProfile(**session.member))
+    member: MemberProfile | None = None
+    if _is_member_role(session.user):
+        member = MemberProfile(**ensure_member_for_user(session.user))
+    return GatewayMeResponse(user=session.user, member=member)

@@ -146,6 +146,72 @@ class AppointmentStore(BaseStore):
             'total_pages': total_pages,
         }
 
+    def list_all_appointments(
+        self,
+        *,
+        query: str | None = None,
+        status_filter: str | None = None,
+        page: int = 1,
+        page_size: int = 20,
+    ) -> dict[str, Any]:
+        """Cross-member appointment listing for admin/support views.
+
+        Joins ``appointment_claims`` so the response includes claimed-by data
+        on every row. Useful for admin Dashboard 'pending claims' filters.
+        """
+        safe_page = max(1, page)
+        safe_page_size = max(1, min(page_size, 100))
+        search = (query or '').strip().lower()
+        status_clean = (status_filter or '').strip().lower()
+        if self.using_db:
+            params: list[Any] = []
+            where: list[str] = []
+            if status_clean:
+                where.append('LOWER(a.status) = %s')
+                params.append(status_clean)
+            if search:
+                where.append("(CAST(a.id AS TEXT) ILIKE %s OR a.service_type ILIKE %s OR COALESCE(a.service_area, '') ILIKE %s OR a.status ILIKE %s)")
+                match = f'%{search}%'
+                params.extend([match, match, match, match])
+            where_sql = ('WHERE ' + ' AND '.join(where)) if where else ''
+            total_row = self.fetch_one(
+                f'SELECT COUNT(*) AS count FROM appointment_schema.appointments a {where_sql}',
+                tuple(params),
+            )
+            params.extend([safe_page_size, (safe_page - 1) * safe_page_size])
+            items = self.fetch_all(
+                f'''
+                SELECT {_APPOINTMENT_SELECT_COLUMNS}
+                {_APPOINTMENT_SELECT_FROM}
+                {where_sql}
+                ORDER BY a.requested_date DESC, a.id DESC
+                LIMIT %s OFFSET %s
+                ''',
+                tuple(params),
+            )
+            total = int(total_row['count']) if total_row else 0
+        else:
+            rows = self.memory.list(
+                self._memory_key('appointments'),
+                sort_key=lambda row: (row.get('requested_date'), row['id']),
+                reverse=True,
+            )
+            if status_clean:
+                rows = [row for row in rows if str(row.get('status', '')).lower() == status_clean]
+            if search:
+                rows = [row for row in rows if self._matches(row, search)]
+            total = len(rows)
+            start = (safe_page - 1) * safe_page_size
+            items = [self._with_claim_metadata(row) for row in rows[start:start + safe_page_size]]
+        total_pages = max(1, (total + safe_page_size - 1) // safe_page_size)
+        return {
+            'items': items,
+            'page': safe_page,
+            'page_size': safe_page_size,
+            'total': total,
+            'total_pages': total_pages,
+        }
+
     def _matches_service_type(self, row: dict[str, Any], service_type: str) -> bool:
         if not service_type:
             return True

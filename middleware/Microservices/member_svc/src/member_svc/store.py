@@ -80,6 +80,68 @@ class MemberStore(BaseStore):
         row.setdefault('preferences', {})
         return row
 
+    def list_all_members(
+        self,
+        *,
+        query: str | None = None,
+        page: int = 1,
+        page_size: int = 20,
+    ) -> dict[str, Any]:
+        """Cross-member listing for admin/support views. Paginated, optional search."""
+        safe_page = max(1, page)
+        safe_page_size = max(1, min(page_size, 100))
+        search = (query or '').strip().lower()
+        if self.using_db:
+            params: list[Any] = []
+            where_sql = ''
+            if search:
+                where_sql = (
+                    "WHERE LOWER(first_name) ILIKE %s OR LOWER(last_name) ILIKE %s "
+                    "OR LOWER(email) ILIKE %s OR CAST(id AS TEXT) ILIKE %s"
+                )
+                match = f'%{search}%'
+                params.extend([match, match, match, match])
+            total_row = self.fetch_one(
+                f'SELECT COUNT(*) AS count FROM member_schema.members {where_sql}',
+                tuple(params),
+            )
+            params.extend([safe_page_size, (safe_page - 1) * safe_page_size])
+            items = self.fetch_all(
+                f'''
+                SELECT id, user_id, tenant_id, first_name, last_name, email, phone, dob,
+                       insurance_id, preferences, created_at, updated_at
+                FROM member_schema.members
+                {where_sql}
+                ORDER BY id DESC
+                LIMIT %s OFFSET %s
+                ''',
+                tuple(params),
+            )
+            for row in items:
+                row.setdefault('preferences', {})
+            total = int(total_row['count']) if total_row else 0
+        else:
+            rows = self.memory.list(self._memory_key('members'))
+            if search:
+                def _match(row: dict[str, Any]) -> bool:
+                    haystack = ' '.join(
+                        str(row.get(field) or '') for field in ('id', 'first_name', 'last_name', 'email')
+                    ).lower()
+                    return search in haystack
+                rows = [row for row in rows if _match(row)]
+            rows.sort(key=lambda row: row['id'], reverse=True)
+            total = len(rows)
+            start = (safe_page - 1) * safe_page_size
+            items = rows[start:start + safe_page_size]
+        total_pages = max(1, (total + safe_page_size - 1) // safe_page_size)
+        return {
+            'items': items,
+            'page': safe_page,
+            'page_size': safe_page_size,
+            'total': total,
+            'total_pages': total_pages,
+        }
+
     def get_member_by_user_id(self, user_id: int) -> dict[str, Any] | None:
         if self.using_db:
             row = self.fetch_one(

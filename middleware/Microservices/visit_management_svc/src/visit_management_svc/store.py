@@ -57,6 +57,71 @@ class VisitStore(BaseStore):
             )
         return self.memory.insert(self._memory_key('visits'), record)
 
+    def list_all_visits(
+        self,
+        *,
+        query: str | None = None,
+        status_filter: str | None = None,
+        page: int = 1,
+        page_size: int = 20,
+    ) -> dict[str, Any]:
+        """Cross-member visit listing for admin/support views."""
+        safe_page = max(1, page)
+        safe_page_size = max(1, min(page_size, 100))
+        search = (query or '').strip().lower()
+        status_clean = (status_filter or '').strip().lower()
+        if self.using_db:
+            params: list[Any] = []
+            where: list[str] = []
+            if status_clean:
+                where.append('LOWER(status) = %s')
+                params.append(status_clean)
+            if search:
+                where.append("(CAST(id AS TEXT) ILIKE %s OR COALESCE(notes_summary, '') ILIKE %s OR status ILIKE %s)")
+                match = f'%{search}%'
+                params.extend([match, match, match])
+            where_sql = ('WHERE ' + ' AND '.join(where)) if where else ''
+            total_row = self.fetch_one(
+                f'SELECT COUNT(*) AS count FROM visit_schema.visits {where_sql}',
+                tuple(params),
+            )
+            params.extend([safe_page_size, (safe_page - 1) * safe_page_size])
+            items = self.fetch_all(
+                f'''
+                SELECT id, member_id, appointment_id, staff_id, visit_date, status,
+                       started_at, completed_at, notes_summary, created_at
+                FROM visit_schema.visits
+                {where_sql}
+                ORDER BY visit_date DESC, id DESC
+                LIMIT %s OFFSET %s
+                ''',
+                tuple(params),
+            )
+            total = int(total_row['count']) if total_row else 0
+        else:
+            rows = self.memory.list(self._memory_key('visits'))
+            if status_clean:
+                rows = [row for row in rows if str(row.get('status', '')).lower() == status_clean]
+            if search:
+                def _match(row: dict[str, Any]) -> bool:
+                    haystack = ' '.join(
+                        str(row.get(field) or '') for field in ('id', 'status', 'notes_summary')
+                    ).lower()
+                    return search in haystack
+                rows = [row for row in rows if _match(row)]
+            rows.sort(key=lambda row: (row.get('visit_date'), row['id']), reverse=True)
+            total = len(rows)
+            start = (safe_page - 1) * safe_page_size
+            items = rows[start:start + safe_page_size]
+        total_pages = max(1, (total + safe_page_size - 1) // safe_page_size)
+        return {
+            'items': items,
+            'page': safe_page,
+            'page_size': safe_page_size,
+            'total': total,
+            'total_pages': total_pages,
+        }
+
     def list_visits_for_appointment(self, appointment_id: int) -> list[dict[str, Any]]:
         if self.using_db:
             return self.fetch_all(

@@ -92,6 +92,24 @@ class AppointmentClient:
         _raise_for(resp)
         return resp.json()
 
+    def list_all_appointments(
+        self,
+        *,
+        query: str | None = None,
+        status_filter: str | None = None,
+        page: int = 1,
+        page_size: int = 20,
+    ) -> dict[str, Any]:
+        """Cross-member listing — admin/support only."""
+        params: dict[str, Any] = {'page': page, 'page_size': page_size}
+        if query:
+            params['query'] = query
+        if status_filter:
+            params['status_filter'] = status_filter
+        resp = self._client.get('/appointments/all', params=params)
+        _raise_for(resp)
+        return resp.json()
+
     def update_appointment(self, appointment_id: int, payload: AppointmentUpdate) -> dict[str, Any]:
         resp = self._client.patch(
             f'/appointments/{appointment_id}',
