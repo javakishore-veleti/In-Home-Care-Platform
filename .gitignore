@@ -14,7 +14,9 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
+# `lib/` is intentionally root-anchored: bare `lib/` would also swallow
+# our TypeScript portals' src/lib/ directories.
+/lib/
 lib64/
 parts/
 sdist/
@@ -211,3 +213,6 @@ marimo/_lsp/
 __marimo__/
 node_modules/
 *.tsbuildinfo
+
+# Local dev runtime (PID files, logs)
+.run/
