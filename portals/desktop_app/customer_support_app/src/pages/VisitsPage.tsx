@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 
 import { useAuth } from '../context/AuthContext'
 import { api } from '../lib/api'
@@ -6,6 +7,7 @@ import type { PaginatedResponse, VisitRow } from '../types'
 
 export function VisitsPage() {
   const { token } = useAuth()
+  const navigate = useNavigate()
   const [data, setData] = useState<PaginatedResponse<VisitRow> | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -49,7 +51,11 @@ export function VisitsPage() {
           </thead>
           <tbody>
             {data.items.map((row) => (
-              <tr key={row.id} className="border-b border-[#0D7377]/10 text-sm">
+              <tr
+                key={row.id}
+                onClick={() => navigate(`/app/visits/${row.id}`)}
+                className="border-b border-[#0D7377]/10 text-sm cursor-pointer hover:bg-[#0D7377]/5"
+              >
                 <td className="px-4 py-3 font-mono">V-{row.id}</td>
                 <td className="px-4 py-3">M-{row.member_id}</td>
                 <td className="px-4 py-3">{row.appointment_id ? `A-${row.appointment_id}` : '—'}</td>

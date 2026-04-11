@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 
 import { useAuth } from '../context/AuthContext'
 import { api } from '../lib/api'
@@ -7,6 +8,7 @@ import { Pager } from './AppointmentsPage'
 
 export function MembersPage() {
   const { token } = useAuth()
+  const navigate = useNavigate()
   const [data, setData] = useState<PaginatedResponse<MemberRow> | null>(null)
   const [query, setQuery] = useState('')
   const [page, setPage] = useState(1)
@@ -63,7 +65,11 @@ export function MembersPage() {
           </thead>
           <tbody>
             {data.items.map((row) => (
-              <tr key={row.id} className="border-b border-[#0D7377]/10 text-sm">
+              <tr
+                key={row.id}
+                onClick={() => navigate(`/app/members/${row.id}`)}
+                className="border-b border-[#0D7377]/10 text-sm cursor-pointer hover:bg-[#0D7377]/5"
+              >
                 <td className="px-4 py-3 font-mono">M-{row.id}</td>
                 <td className="px-4 py-3">
                   {[row.first_name, row.last_name].filter(Boolean).join(' ') || '—'}

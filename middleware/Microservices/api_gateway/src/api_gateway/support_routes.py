@@ -122,3 +122,26 @@ def list_visits(
         page=page,
         page_size=page_size,
     )
+
+
+@router.get('/appointments/{appointment_id}')
+def get_appointment(
+    appointment_id: int,
+    appointment_client=Depends(get_appointment_client),
+) -> dict[str, Any]:
+    return appointment_client.get_appointment(appointment_id)
+
+
+@router.get('/members/{member_id}')
+def get_member(member_id: int, member_store=Depends(get_member_store)) -> dict[str, Any]:
+    return member_store.get_member(member_id)
+
+
+@router.get('/visits/{visit_id}')
+def get_visit(visit_id: int, visit_store=Depends(get_visit_store)) -> dict[str, Any]:
+    return visit_store.get_visit(visit_id)
+
+
+@router.get('/cases/{case_id}')
+def get_case(case_id: int, support_case_store=Depends(get_support_case_store)) -> dict[str, Any]:
+    return support_case_store.get_case(case_id)

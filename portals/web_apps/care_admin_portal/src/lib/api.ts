@@ -56,13 +56,22 @@ export const api = {
   listAppointments(token: string, params: URLSearchParams) {
     return request<PaginatedResponse<AppointmentRow>>(`/api/admin/appointments?${params.toString()}`, {}, token)
   },
+  getAppointment(token: string, appointmentId: number) {
+    return request<AppointmentRow>(`/api/admin/appointments/${appointmentId}`, {}, token)
+  },
   listVisits(token: string, params: URLSearchParams) {
     return request<PaginatedResponse<VisitRow>>(`/api/admin/visits?${params.toString()}`, {}, token)
+  },
+  getVisit(token: string, visitId: number) {
+    return request<VisitRow>(`/api/admin/visits/${visitId}`, {}, token)
   },
   listClaims(token: string, params: URLSearchParams) {
     return request<PaginatedResponse<AppointmentRow>>(`/api/admin/claims?${params.toString()}`, {}, token)
   },
   listStaff(token: string) {
     return request<{ items: StaffRow[]; total: number }>('/api/admin/staff', {}, token)
+  },
+  getMember(token: string, memberId: number) {
+    return request<MemberRow>(`/api/admin/members/${memberId}`, {}, token)
   },
 }

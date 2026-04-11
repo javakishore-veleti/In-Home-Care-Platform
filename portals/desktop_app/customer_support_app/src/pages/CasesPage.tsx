@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
+import { useNavigate } from 'react-router-dom'
 
 import { useAuth } from '../context/AuthContext'
 import { api } from '../lib/api'
@@ -20,6 +21,7 @@ const STATUS_COLORS: Record<string, string> = {
 
 export function CasesPage() {
   const { token } = useAuth()
+  const navigate = useNavigate()
   const [data, setData] = useState<PaginatedResponse<CaseRow> | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -184,7 +186,11 @@ export function CasesPage() {
           </thead>
           <tbody>
             {data.items.map((c) => (
-              <tr key={c.id} className="border-b border-[#0D7377]/10 text-sm">
+              <tr
+                key={c.id}
+                onClick={() => navigate(`/app/cases/${c.id}`)}
+                className="border-b border-[#0D7377]/10 text-sm cursor-pointer hover:bg-[#0D7377]/5"
+              >
                 <td className="px-4 py-3 font-mono">C-{c.id}</td>
                 <td className="px-4 py-3">M-{c.member_id}</td>
                 <td className="px-4 py-3">{c.subject}</td>

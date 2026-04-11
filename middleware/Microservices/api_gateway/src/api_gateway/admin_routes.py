@@ -122,3 +122,21 @@ def list_staff(auth_store=Depends(get_auth_store)) -> dict[str, Any]:
         ['admin', 'support', 'field_officer', 'care_planner', 'auditor'],
     )
     return {'items': staff, 'total': len(staff)}
+
+
+@router.get('/appointments/{appointment_id}')
+def get_appointment(
+    appointment_id: int,
+    appointment_client=Depends(get_appointment_client),
+) -> dict[str, Any]:
+    return appointment_client.get_appointment(appointment_id)
+
+
+@router.get('/members/{member_id}')
+def get_member(member_id: int, member_store=Depends(get_member_store)) -> dict[str, Any]:
+    return member_store.get_member(member_id)
+
+
+@router.get('/visits/{visit_id}')
+def get_visit(visit_id: int, visit_store=Depends(get_visit_store)) -> dict[str, Any]:
+    return visit_store.get_visit(visit_id)

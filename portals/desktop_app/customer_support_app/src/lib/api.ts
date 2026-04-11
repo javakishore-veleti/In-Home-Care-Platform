@@ -56,13 +56,25 @@ export const api = {
       body: JSON.stringify(payload),
     }, token)
   },
+  getCase(token: string, caseId: number) {
+    return request<CaseRow>(`/api/support/cases/${caseId}`, {}, token)
+  },
   listMembers(token: string, params: URLSearchParams) {
     return request<PaginatedResponse<MemberRow>>(`/api/support/members?${params.toString()}`, {}, token)
+  },
+  getMember(token: string, memberId: number) {
+    return request<MemberRow>(`/api/support/members/${memberId}`, {}, token)
   },
   listAppointments(token: string, params: URLSearchParams) {
     return request<PaginatedResponse<AppointmentRow>>(`/api/support/appointments?${params.toString()}`, {}, token)
   },
+  getAppointment(token: string, appointmentId: number) {
+    return request<AppointmentRow>(`/api/support/appointments/${appointmentId}`, {}, token)
+  },
   listVisits(token: string, params: URLSearchParams) {
     return request<PaginatedResponse<VisitRow>>(`/api/support/visits?${params.toString()}`, {}, token)
+  },
+  getVisit(token: string, visitId: number) {
+    return request<VisitRow>(`/api/support/visits/${visitId}`, {}, token)
   },
 }
