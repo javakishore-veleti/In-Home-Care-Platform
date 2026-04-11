@@ -7,6 +7,7 @@ docker network create in-home-care-network 2>/dev/null || echo "Network in-home-
 
 echo "=== Core infrastructure ==="
 docker compose -f "$DIR/Kafka/docker-compose.yml" up -d
+docker compose -f "$DIR/KafkaUI/docker-compose.yml" up -d
 # docker compose -f "$DIR/MongoDB/docker-compose.yml" up -d
 
 echo "=== Extras ==="

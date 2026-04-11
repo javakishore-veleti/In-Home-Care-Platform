@@ -10,6 +10,7 @@ docker network create in-home-care-network 2>/dev/null || echo "Network in-home-
 
 echo "=== Kafka ==="
 docker compose -f "$DIR/Kafka/docker-compose.yml" up -d
+docker compose -f "$DIR/KafkaUI/docker-compose.yml" up -d
 
 echo "=== Postgres ==="
 docker compose -f "$DIR/Postgres/docker-compose.yml" up -d

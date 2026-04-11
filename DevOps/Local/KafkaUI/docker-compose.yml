@@ -1,0 +1,34 @@
+# Kafka-UI for the local stack.
+#
+# Browse to http://127.0.0.1:8088 once `npm run setup:local:docker:up`
+# finishes (give it ~30s — the UI is a Spring Boot app and is the
+# slowest container to come up). You'll see the `appointment.events`
+# topic, every message flowing through it, and the slack_svc consumer
+# group with its current offset / lag — that's how you confirm an
+# appointment created in the member portal was actually consumed.
+#
+# How this reaches the broker
+# ---------------------------
+# kafka-ui talks to the broker via the dedicated docker-internal
+# listener at `kafka:29092`. That hostname only resolves on the shared
+# `in-home-care-network`, which both the kafka and kafka-ui containers
+# are attached to. Host-side python middleware still uses
+# `localhost:9092` — these are two listeners on the same broker, see
+# DevOps/Local/Kafka/docker-compose.yml.
+services:
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: in-home-care-kafka-ui
+    restart: unless-stopped
+    ports:
+      - "8088:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: in-home-care-local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+      DYNAMIC_CONFIG_ENABLED: "true"
+    networks:
+      - in-home-care-network
+
+networks:
+  in-home-care-network:
+    external: true

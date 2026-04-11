@@ -78,6 +78,7 @@ COMPOSE_FILES=(
   "$DIR/VectorDBs/qdrant/docker-compose.yml"
   "$DIR/Redis/docker-compose.yml"
   "$DIR/Postgres/docker-compose.yml"
+  "$DIR/KafkaUI/docker-compose.yml"
   "$DIR/Kafka/docker-compose.yml"
   "$DIR/MongoDB/docker-compose.yml"
 )

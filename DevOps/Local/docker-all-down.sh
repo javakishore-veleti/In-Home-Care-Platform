@@ -22,6 +22,7 @@ docker compose -f "$DIR/Redis/docker-compose.yml" down
 docker compose -f "$DIR/Postgres/docker-compose.yml" down
 
 echo "=== Core infrastructure ==="
+docker compose -f "$DIR/KafkaUI/docker-compose.yml" down
 docker compose -f "$DIR/Kafka/docker-compose.yml" down
 docker compose -f "$DIR/MongoDB/docker-compose.yml" down
 
