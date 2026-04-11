@@ -110,7 +110,7 @@ async def run_consumer(
     Kafka outage at startup does not crash the service.
     """
     if AIOKafkaConsumer is None or not kafka_enabled():
-        log.warning('kafka.consumer_disabled', extra={'topic': topic, 'group_id': group_id})
+        log.warning('kafka.consumer_disabled topic=%s group_id=%s', topic, group_id)
         return
 
     backoff = 1.0
@@ -126,7 +126,7 @@ async def run_consumer(
         try:
             await consumer.start()
             backoff = 1.0
-            log.info('kafka.consumer_started', extra={'topic': topic, 'group_id': group_id})
+            log.info('kafka.consumer_started topic=%s group_id=%s bootstrap=%s', topic, group_id, bootstrap_servers())
             while not stop_event.is_set():
                 batch = await consumer.getmany(timeout_ms=1000, max_records=10)
                 rewind_after_batch = False
@@ -137,7 +137,7 @@ async def run_consumer(
                         try:
                             ok = await handler(msg.value)
                         except Exception as exc:  # pragma: no cover
-                            log.exception('kafka.handler_error', extra={'error': str(exc), 'topic': topic})
+                            log.exception('kafka.handler_error topic=%s error=%s', topic, exc)
                             ok = False
                         if ok:
                             last_ok_offset = msg.offset + 1
@@ -153,7 +153,29 @@ async def run_consumer(
                     # Backoff before the next poll re-delivers the failed message.
                     await asyncio.sleep(2.0)
         except (KafkaError, OSError) as exc:
-            log.warning('kafka.consumer_error', extra={'topic': topic, 'error': str(exc), 'backoff': backoff})
+            log.warning(
+                'kafka.consumer_error topic=%s group_id=%s backoff=%.1fs error=%s',
+                topic,
+                group_id,
+                backoff,
+                exc,
+            )
+            await asyncio.sleep(backoff)
+            backoff = min(backoff * 2, 30.0)
+        except Exception as exc:  # pragma: no cover
+            # aiokafka sometimes surfaces transient broker startup
+            # errors (GroupCoordinatorNotAvailable, UnknownTopicOrPartition
+            # during the first __consumer_offsets creation) as plain
+            # Exceptions rather than KafkaError subclasses — catch them
+            # too so the outer retry loop actually retries instead of
+            # bubbling up and killing the consumer task.
+            log.warning(
+                'kafka.consumer_unexpected topic=%s group_id=%s backoff=%.1fs error=%s',
+                topic,
+                group_id,
+                backoff,
+                exc,
+            )
             await asyncio.sleep(backoff)
             backoff = min(backoff * 2, 30.0)
         finally:

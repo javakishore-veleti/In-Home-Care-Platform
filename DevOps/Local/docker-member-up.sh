@@ -18,4 +18,7 @@ docker compose -f "$DIR/Postgres/docker-compose.yml" up -d
 echo "=== Waiting for Postgres to accept queries ==="
 bash "$DIR/wait-for-postgres.sh"
 
+echo "=== Waiting for Kafka to accept consumer-group traffic ==="
+bash "$DIR/wait-for-kafka.sh"
+
 echo "Member-stack Docker containers up on network: in-home-care-network"

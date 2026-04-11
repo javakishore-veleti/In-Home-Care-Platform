@@ -32,4 +32,7 @@ echo "=== Airflow ==="
 echo "=== Waiting for Postgres to accept queries ==="
 bash "$DIR/wait-for-postgres.sh"
 
+echo "=== Waiting for Kafka to accept consumer-group traffic ==="
+bash "$DIR/wait-for-kafka.sh"
+
 echo "All stacks up on network: in-home-care-network"
