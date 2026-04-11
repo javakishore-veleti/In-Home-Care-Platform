@@ -375,10 +375,19 @@ h3 {
 }
 
 .auth-visual {
+  gap: 0;
   border-radius: 24px;
   overflow: hidden;
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.auth-visual-caption {
+  margin: 0;
+  padding: 0.85rem 1rem 1rem;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.82);
 }
 
 .feature-list {
@@ -731,14 +740,30 @@ h3 {
   gap: 0.7rem;
 }
 
-.public-nav a:not(.primary-button) {
+.public-nav-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   padding: 0.8rem 1rem;
   color: #375566;
   border-radius: 999px;
 }
 
-.public-nav a:not(.primary-button):hover {
+.public-nav-link:hover,
+.public-nav-link.active {
   background: rgba(13, 115, 119, 0.08);
+  color: #0f5b61;
+}
+
+.public-nav-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+}
+
+.public-nav-cta.active {
+  box-shadow: 0 0 0 3px rgba(20, 166, 176, 0.18);
 }
 
 @media (max-width: 1024px) {
@@ -765,6 +790,11 @@ h3 {
 
   .public-nav {
     grid-auto-flow: row;
+    width: 100%;
+  }
+
+  .public-nav-link,
+  .public-nav-cta {
     width: 100%;
   }
 }

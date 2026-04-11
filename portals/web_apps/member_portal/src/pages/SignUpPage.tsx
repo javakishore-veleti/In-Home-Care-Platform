@@ -35,7 +35,7 @@ export function SignUpPage() {
           <p className="muted">
             Create a secure member profile, save service locations, and start requesting care with cleaner follow-up.
           </p>
-          <AuthCareIllustration title="Create your account, save addresses, and start using the portal right away." />
+          <AuthCareIllustration title="Create your account, save addresses, and get started right away." />
           <div className="support-stat-grid">
             <div className="support-stat">
               <strong>Multiple addresses</strong>

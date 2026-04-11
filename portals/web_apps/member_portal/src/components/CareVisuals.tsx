@@ -80,9 +80,8 @@ export function AuthCareIllustration({ title }: { title: string }) {
         <circle cx="332" cy="142" r="11" fill="#dff4f5" />
         <rect x="350" y="126" width="22" height="10" rx="5" fill="#d8edf0" />
         <rect x="350" y="144" width="28" height="10" rx="5" fill="#d8edf0" />
-
-        <text x="38" y="198" fill="#4d6d80" fontSize="14" fontFamily="Inter, system-ui, sans-serif">{title}</text>
       </svg>
+      <p className="auth-visual-caption">{title}</p>
     </div>
   )
 }

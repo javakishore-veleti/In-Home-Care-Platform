@@ -1,4 +1,4 @@
-import { Link, Navigate, Route, Routes } from 'react-router-dom'
+import { NavLink, Navigate, Route, Routes } from 'react-router-dom'
 
 import { AppShell } from './components/AppShell'
 import { ProtectedRoute } from './components/ProtectedRoute'
@@ -48,9 +48,9 @@ function PublicLayout({ children }: { children: React.ReactNode }) {
             </div>
           </div>
           <nav className="public-nav">
-            <Link to="/">Home</Link>
-            <Link to="/signin">Sign in</Link>
-            <Link className="primary-button" to="/signup">Create account</Link>
+            <NavLink to="/" end className={({ isActive }) => `public-nav-link ${isActive ? 'active' : ''}`}>Home</NavLink>
+            <NavLink to="/signin" className={({ isActive }) => `public-nav-link ${isActive ? 'active' : ''}`}>Sign in</NavLink>
+            <NavLink to="/signup" className={({ isActive }) => `primary-button public-nav-cta ${isActive ? 'active' : ''}`}>Create account</NavLink>
           </nav>
         </div>
       </header>

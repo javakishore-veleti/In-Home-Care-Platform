@@ -10,8 +10,8 @@ export function HomePage() {
           <p className="eyebrow">Member portal</p>
           <h1 className="home-hero-title">Manage home-care appointments and member details in one place.</h1>
           <p className="hero-copy">
-            This is a working member experience for everyday care coordination: profile settings, saved addresses,
-            appointment booking, visit detail review, and guided support after sign-in.
+            Use this portal to manage profile details, saved addresses, appointment requests, visit updates,
+            and support after sign-in.
           </p>
           <div className="hero-actions">
             <Link className="primary-button" to="/signup">Create account</Link>
@@ -34,7 +34,7 @@ export function HomePage() {
         </div>
         <div className="hero-summary card accent-card">
           <p className="eyebrow">Portal walkthrough</p>
-          <h2>What the member workspace helps you handle</h2>
+          <h2>What you can manage after sign-in</h2>
           <HomeCareIllustration />
           <ul className="feature-list">
             <li className="feature-item feature-item-light">

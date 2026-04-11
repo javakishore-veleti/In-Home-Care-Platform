@@ -33,11 +33,11 @@ export function SignInPage() {
       <div className="auth-layout">
         <div className="card auth-aside">
           <p className="eyebrow">Welcome back</p>
-          <h2>Everything important in one calm, organized workspace.</h2>
+          <h2>Everything important in one clear, organized place.</h2>
           <p className="muted">
             Designed for real member tasks: booking care, reviewing visit follow-up, and keeping service locations current.
           </p>
-          <AuthCareIllustration title="Appointments, visit follow-up, and account details stay connected." />
+          <AuthCareIllustration title="Appointments, visit updates, and account details stay connected." />
           <div className="support-stat-grid">
             <div className="support-stat">
               <strong>Search fast</strong>
@@ -69,7 +69,7 @@ export function SignInPage() {
         </div>
         <form className="card auth-card" onSubmit={handleSubmit}>
           <p className="eyebrow">Sign in</p>
-          <h1>Sign in to your care workspace</h1>
+          <h1>Sign in to your account</h1>
           <p className="muted">Use the email and password linked to your member account.</p>
           <label>
             Email
