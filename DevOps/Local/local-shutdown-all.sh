@@ -21,6 +21,10 @@ set -uo pipefail
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
 DIR="$REPO/DevOps/Local"
 
+echo "=== Stopping slack-tunnel (if up) ==="
+bash "$DIR/slack-tunnel.sh" down 2>&1 | sed 's/^/  /' || true
+
+echo ""
 echo "=== Stopping recorded middleware/portal PIDs ==="
 for pid_file in /tmp/ihcp_middleware.pids /tmp/ihcp_portals.pids "$REPO/.run/member_middleware.pids"; do
   if [ -f "$pid_file" ]; then

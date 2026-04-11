@@ -14,6 +14,16 @@ PID_FILE="$RUN_DIR/member_middleware.pids"
 LOG_DIR="$RUN_DIR/logs"
 mkdir -p "$LOG_DIR"
 
+# Source .env.local so SLACK_BOT_TOKEN, SLACK_SIGNING_SECRET, etc. are
+# visible to the middleware processes started below.
+if [ -f "$REPO/.env.local" ]; then
+  echo "Sourcing .env.local"
+  set -a
+  # shellcheck disable=SC1090,SC1091
+  . "$REPO/.env.local"
+  set +a
+fi
+
 if [ ! -f "$VENV/bin/uvicorn" ]; then
   echo "ERROR: uvicorn not found in venv. Run: npm run setup:local:venv:install"
   exit 1
