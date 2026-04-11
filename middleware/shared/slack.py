@@ -49,10 +49,24 @@ def _call(method: str, payload: dict[str, Any]) -> dict[str, Any] | None:
         with urllib.request.urlopen(req, timeout=5) as resp:
             body = json.loads(resp.read().decode('utf-8'))
     except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
-        log.warning('slack.call_failed', extra={'method': method, 'error': str(exc)})
+        # Inline the values in the message text so they survive default
+        # Python logging (which silently drops the `extra` dict).
+        log.warning('slack.call_failed method=%s error=%s', method, str(exc))
         return None
     if not body.get('ok'):
-        log.warning('slack.api_error', extra={'method': method, 'error': body.get('error')})
+        err = body.get('error')
+        # Hint at the most common fixes inline so the log line is
+        # actionable without having to dig into Slack's API docs.
+        hint = ''
+        if err == 'not_in_channel':
+            hint = ' (invite the bot to the channel: /invite @your_bot)'
+        elif err == 'channel_not_found':
+            hint = ' (channel id/name does not exist or bot lacks visibility)'
+        elif err == 'invalid_auth' or err == 'token_revoked':
+            hint = ' (SLACK_BOT_TOKEN is invalid or revoked)'
+        elif err == 'missing_scope':
+            hint = f' (bot token is missing required scope: needed={body.get("needed")}, provided={body.get("provided")})'
+        log.warning('slack.api_error method=%s error=%s%s', method, err, hint)
     return body
 
 
