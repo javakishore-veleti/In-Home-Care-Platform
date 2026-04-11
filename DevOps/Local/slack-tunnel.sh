@@ -104,11 +104,26 @@ cmd_up() {
   fi
 
   # Refuse to start a second ngrok if one is already on :4040 — its
-  # inspector API is global, not per-tunnel, so we'd just confuse
-  # ourselves.
+  # inspector API is global, not per-tunnel — but only "reuse" it if
+  # the existing tunnel actually points at our target port. Otherwise
+  # we'd silently report success while Slack POSTs at the wrong port.
   if curl -fs --max-time 1 "$INSPECTOR_URL" >/dev/null 2>&1; then
-    echo "slack-tunnel: an ngrok process is already running on :4040"
-    echo "  Reusing its tunnel for $LOCAL_TARGET (assuming it points there)."
+    existing_addr="$(
+      curl -fs --max-time 1 "$INSPECTOR_URL" 2>/dev/null \
+        | python3 -c "import sys,json; tunnels=json.load(sys.stdin).get('tunnels',[]); addrs=[t['config']['addr'] for t in tunnels]; print(addrs[0] if addrs else '')" 2>/dev/null \
+        || true
+    )"
+    if [ "$existing_addr" = "$LOCAL_TARGET" ] || [ "$existing_addr" = "http://localhost:8009" ]; then
+      echo "slack-tunnel: an ngrok agent is already running on :4040 and pointing at $existing_addr — reusing it."
+    else
+      echo "slack-tunnel: ERROR — another ngrok agent is on :4040 but pointing at:"
+      echo "    $existing_addr"
+      echo "  ngrok free tier only allows one agent per account at a time, and we"
+      echo "  need ours pointing at $LOCAL_TARGET. Stop the other agent first:"
+      echo "    pkill -f 'ngrok http' && sleep 1 && npm run local:slack:tunnel:up"
+      echo "  Or if it was started by this script, run: npm run local:slack:tunnel:down"
+      exit 1
+    fi
   else
     echo "slack-tunnel: starting ngrok against $LOCAL_TARGET"
     ngrok http 8009 --log=stdout > "$LOG_FILE" 2>&1 &
