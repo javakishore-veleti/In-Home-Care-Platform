@@ -9,7 +9,16 @@
     "splash": {
       "backgroundColor": "#0D7377"
     },
-    "ios": { "supportsTablet": false },
-    "android": { "adaptiveIcon": { "backgroundColor": "#0D7377" } }
+    "ios": {
+      "supportsTablet": false
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#0D7377"
+      }
+    },
+    "plugins": [
+      "expo-asset"
+    ]
   }
 }

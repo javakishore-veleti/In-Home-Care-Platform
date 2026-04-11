@@ -20,11 +20,12 @@ const visits = [
 ];
 
 export default function App() {
-  const [screen, setScreen] = useState<'list' | 'visit'>('list');
+  const [tab, setTab] = useState('assignments');
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
+
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Field Staff</Text>
         <Text style={styles.headerSub}>Today's Assignments</Text>
@@ -32,28 +33,47 @@ export default function App() {
 
       <ScrollView style={styles.content}>
         {visits.map(v => (
-          <TouchableOpacity key={v.id} style={styles.card} onPress={() => setScreen('visit')}>
+          <TouchableOpacity key={v.id} style={styles.card}>
             <View style={styles.cardHeader}>
               <Text style={styles.cardTitle}>{v.member}</Text>
               <View style={[styles.badge, { backgroundColor: v.status === 'Next' ? COLORS.secondary : COLORS.info }]}>
                 <Text style={styles.badgeText}>{v.status}</Text>
               </View>
             </View>
-            <Text style={styles.cardDetail}>{v.type} · {v.time}</Text>
+            <Text style={styles.cardDetail}>{v.type} - {v.time}</Text>
             <Text style={styles.cardAddress}>{v.address}</Text>
           </TouchableOpacity>
         ))}
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Quick Actions</Text>
+          <TouchableOpacity style={styles.actionBtn}>
+            <Text style={styles.actionBtnText}>Start Next Visit</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.actionBtn, { backgroundColor: COLORS.primary }]}>
+            <Text style={styles.actionBtnText}>Record Visit Notes</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.actionBtn, { backgroundColor: COLORS.info }]}>
+            <Text style={styles.actionBtnText}>Capture Document</Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
 
       <View style={styles.bottomBar}>
-        <TouchableOpacity style={styles.bottomBtn}>
-          <Text style={styles.bottomBtnText}>Assignments</Text>
+        <TouchableOpacity
+          style={[styles.bottomBtn, tab === 'assignments' && styles.bottomBtnActive]}
+          onPress={() => setTab('assignments')}>
+          <Text style={[styles.bottomBtnText, tab === 'assignments' && { color: COLORS.white }]}>Assignments</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.bottomBtn, styles.bottomBtnActive]}>
-          <Text style={[styles.bottomBtnText, { color: COLORS.white }]}>Record Visit</Text>
+        <TouchableOpacity
+          style={[styles.bottomBtn, tab === 'record' && styles.bottomBtnActive]}
+          onPress={() => setTab('record')}>
+          <Text style={[styles.bottomBtnText, tab === 'record' && { color: COLORS.white }]}>Record</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.bottomBtn}>
-          <Text style={styles.bottomBtnText}>Camera</Text>
+        <TouchableOpacity
+          style={[styles.bottomBtn, tab === 'camera' && styles.bottomBtnActive]}
+          onPress={() => setTab('camera')}>
+          <Text style={[styles.bottomBtnText, tab === 'camera' && { color: COLORS.white }]}>Camera</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -73,6 +93,10 @@ const styles = StyleSheet.create({
   badgeText: { color: COLORS.white, fontSize: 12, fontWeight: 'bold' },
   cardDetail: { fontSize: 14, color: COLORS.textMuted, marginTop: 6 },
   cardAddress: { fontSize: 13, color: COLORS.textMuted, marginTop: 2 },
+  section: { marginTop: 20 },
+  sectionTitle: { fontSize: 18, fontWeight: 'bold', color: COLORS.text, marginBottom: 12 },
+  actionBtn: { backgroundColor: COLORS.secondary, borderRadius: 10, paddingVertical: 14, alignItems: 'center', marginBottom: 10 },
+  actionBtnText: { color: COLORS.white, fontWeight: 'bold', fontSize: 16 },
   bottomBar: { flexDirection: 'row', borderTopWidth: 2, borderColor: COLORS.primary, backgroundColor: COLORS.white },
   bottomBtn: { flex: 1, paddingVertical: 14, alignItems: 'center' },
   bottomBtnActive: { backgroundColor: COLORS.secondary },
