@@ -78,6 +78,10 @@ target/
 # Jupyter Notebook
 .ipynb_checkpoints
 
+# macOS Finder metadata
+.DS_Store
+**/.DS_Store
+
 # IPython
 profile_default/
 ipython_config.py

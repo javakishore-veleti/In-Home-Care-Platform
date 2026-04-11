@@ -119,7 +119,8 @@ In-Home-Care-Platform/
 │   ├── Observability/{Prometheus,Grafana,Kibana}/
 │
 ├── Docs/Design/
-│   └── architecture.drawio              # 7-tab architecture diagram
+│   ├── architecture.drawio              # 9-tab architecture diagram
+│   └── enterprise_architecture_single.drawio # single-page enterprise overview
 │
 ├── README.md                            # ← you are here
 └── README_Development_Plan.md
@@ -131,6 +132,17 @@ is a standalone Python service with its own `pyproject.toml`, `src/`, and
 Docker Compose stacks for local dev.
 
 ## Architecture (mapped to `Docs/Design/architecture.drawio`)
+
+For a one-page enterprise view, open
+`Docs/Design/enterprise_architecture_single.drawio`. It condenses the
+repo into a single diagram spanning personas, portals, gateways,
+microservices, agentic flows, data stores, event streaming, AI
+components, and platform operations.
+
+Two additional simplified tabs were also added to
+`Docs/Design/architecture.drawio`:
+- **Tab 8** — Middleware + Data, Events & AI
+- **Tab 9** — Enterprise Architecture - Simplified
 
 ### Tab 1 — System Overview
 
