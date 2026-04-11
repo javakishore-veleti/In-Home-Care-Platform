@@ -23,3 +23,6 @@ docker compose -f "$DIR/Observability/Grafana/docker-compose.yml" up -d
 docker compose -f "$DIR/Observability/Kibana/docker-compose.yml" up -d
 
 echo "All stacks up."
+
+echo "=== Airflow ==="
+docker compose -f "$DIR/Airflow/docker-compose.yml" up -d

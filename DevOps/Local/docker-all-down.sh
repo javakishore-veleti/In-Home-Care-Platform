@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 DIR="$(cd "$(dirname "$0")" && pwd)"
+echo "=== Airflow ==="
+docker compose -f "$DIR/Airflow/docker-compose.yml" down
+
 
 echo "=== Observability ==="
 docker compose -f "$DIR/Observability/Kibana/docker-compose.yml" down

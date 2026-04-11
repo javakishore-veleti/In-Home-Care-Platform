@@ -24,3 +24,7 @@ echo "=== Observability ==="
 docker compose -f "$DIR/Observability/Prometheus/docker-compose.yml" ps 2>/dev/null || echo "  Prometheus: not running"
 docker compose -f "$DIR/Observability/Grafana/docker-compose.yml" ps 2>/dev/null || echo "  Grafana: not running"
 docker compose -f "$DIR/Observability/Kibana/docker-compose.yml" ps 2>/dev/null || echo "  Kibana: not running"
+
+echo ""
+echo "=== Airflow ==="
+docker compose -f "$DIR/Airflow/docker-compose.yml" ps 2>/dev/null || echo "  Airflow: not running"

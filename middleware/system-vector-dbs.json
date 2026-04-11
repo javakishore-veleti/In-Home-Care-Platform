@@ -1,0 +1,30 @@
+{
+  "_comment": "Feature toggle for vector DB backends. Set enabled=true to include in ingest.",
+  "vector_dbs": {
+    "qdrant": {
+      "enabled": true,
+      "url": "http://localhost:6333",
+      "collection": "ihcp_collections"
+    },
+    "weaviate": {
+      "enabled": true,
+      "url": "http://localhost:8080",
+      "collection": "IhcpCollections"
+    },
+    "chroma": {
+      "enabled": true,
+      "url": "http://localhost:8000",
+      "collection": "ihcp_collections"
+    },
+    "milvus": {
+      "enabled": false,
+      "url": "http://localhost:19530",
+      "collection": "ihcp_collections"
+    },
+    "pgvector": {
+      "enabled": false,
+      "url": "postgresql://care:care@localhost:5433/care_vectors",
+      "collection": "ihcp_collections"
+    }
+  }
+}

@@ -45,6 +45,10 @@
     "local:stop-all": "npm run local:portals:stop-all && npm run local:middleware:stop-all && npm run setup:local:docker:down",
     "local:status-all": "npm run setup:local:docker:status && npm run local:middleware:status-all && npm run local:portals:status-all",
 
+    "setup:local:airflow:up": "docker compose -f DevOps/Local/Airflow/docker-compose.yml up -d",
+    "setup:local:airflow:down": "docker compose -f DevOps/Local/Airflow/docker-compose.yml down",
+    "setup:local:airflow:status": "docker compose -f DevOps/Local/Airflow/docker-compose.yml ps",
+
     "setup:slack:channels": "python3 DevOps/Slack/create_channels.py",
     "status:slack:channels": "python3 DevOps/Slack/status_channels.py",
     "teardown:slack:channels": "python3 DevOps/Slack/delete_channels.py",
