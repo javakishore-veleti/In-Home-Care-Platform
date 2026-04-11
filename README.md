@@ -1,5 +1,21 @@
 # In-Home-Care-Platform
 
+![Domain](https://img.shields.io/badge/Domain-In--Home%20Care-blue)
+![Architecture](https://img.shields.io/badge/Architecture-Microservices-6A5ACD)
+![Backend](https://img.shields.io/badge/Backend-FastAPI-009688?logo=fastapi&logoColor=white)
+![Frontend](https://img.shields.io/badge/Web-React-61DAFB?logo=react&logoColor=black)
+![Mobile](https://img.shields.io/badge/Mobile-React%20Native-20232A?logo=react&logoColor=61DAFB)
+![Desktop](https://img.shields.io/badge/Desktop-Electron-47848F?logo=electron&logoColor=white)
+![Events](https://img.shields.io/badge/Event%20Streaming-Kafka-231F20?logo=apachekafka&logoColor=white)
+![AI](https://img.shields.io/badge/AI-LangGraph-4B0082)
+![LLM](https://img.shields.io/badge/LLM-RAG%20%2B%20Slack%20Copilot-7C3AED)
+![Gateway](https://img.shields.io/badge/Gateway-MCP%20%2F%20ADK-0F766E)
+![Database](https://img.shields.io/badge/Database-MongoDB%20%2B%20Postgres-336791)
+![Cache](https://img.shields.io/badge/Cache-Redis-DC382D?logo=redis&logoColor=white)
+![VectorDB](https://img.shields.io/badge/VectorDB-Qdrant%20%7C%20Weaviate%20%7C%20Chroma-FF6B6B)
+![Docs](https://img.shields.io/badge/Docs-Architecture%20Draw.io-orange)
+![Status](https://img.shields.io/badge/Status-Active%20Development-brightgreen)
+
 ## Table of contents
 
 - [Business domain](#business-domain)
