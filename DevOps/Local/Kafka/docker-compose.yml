@@ -1,6 +1,6 @@
 services:
   kafka:
-    image: bitnami/kafka:3.7
+    image: bitnami/kafka:3.9
     container_name: in-home-care-kafka
     restart: unless-stopped
     ports:
