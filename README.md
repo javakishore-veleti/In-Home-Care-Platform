@@ -1,5 +1,42 @@
 # In-Home-Care-Platform
 
+## Table of contents
+
+- [Business domain](#business-domain)
+- [Repository layout](#repository-layout)
+- [Architecture](#architecture-mapped-to-docsdesignarchitecturedrawio)
+  - [Tab 1 — System Overview](#tab-1--system-overview)
+  - [Tab 2 — Book Appointment Flow](#tab-2--book-appointment-flow)
+  - [Tab 3 — Sign Up + Sign In](#tab-3--sign-up--sign-in)
+  - [Tab 4 — Visit Listing + Lifecycle](#tab-4--visit-listing--lifecycle)
+  - [Tab 5 — Microservice Map](#tab-5--microservice-map)
+  - [Tab 6 — LangGraph Agentic Flows](#tab-6--langgraph-agentic-flows)
+  - [Tab 7 — Data Model](#tab-7--data-model)
+- [Tech stack](#tech-stack)
+- [Getting started — npm commands for everything](#getting-started--npm-commands-for-everything)
+  - [First-time setup (run once after clone)](#first-time-setup-run-once-after-clone)
+  - [Daily workflow — start / stop / status](#daily-workflow--start--stop--status)
+  - [Portal commands](#portal-commands-each-does-npm-install-before-devbuild)
+  - [Middleware commands](#middleware-commands)
+  - [Docker infrastructure commands](#docker-infrastructure-commands)
+  - [Database migrations](#database-migrations)
+  - [Test + lint](#test--lint)
+  - [Teardown (nuclear option)](#teardown-nuclear-option)
+  - [Full npm script reference](#full-npm-script-reference)
+- [Slack integration — setup + credentials](#slack-integration--setup--credentials)
+  - [Channels](#channels)
+  - [Step 1 — Create a Slack app](#step-1--create-a-slack-app)
+  - [Step 2 — Add bot token scopes](#step-2--add-bot-token-scopes)
+  - [Step 3 — Install to workspace](#step-3--install-to-workspace)
+  - [Step 4 — Export the token](#step-4--export-the-token)
+  - [Step 5 — Create the channels](#step-5--create-the-channels)
+  - [Check channel status](#check-channel-status)
+  - [Tear down channels](#tear-down-channels)
+  - [Adding or renaming channels](#adding-or-renaming-channels)
+- [Status](#status)
+
+---
+
 A full-stack in-home healthcare delivery platform. Members book
 appointments, field staff conduct visits with a mobile app, customer
 support handles cases from a desktop app, and admin staff manage
@@ -281,6 +318,37 @@ npm run setup:local:docker:up         # bring up all stacks
 npm run setup:local:docker:down       # tear down all stacks
 npm run setup:local:docker:status     # show running containers
 ```
+
+### Database migrations
+
+Migrations run **automatically** — you never need to run them by hand:
+
+- **Local:** `npm run setup:local:all` and `npm run local:start-all`
+  both chain `npm run db:migrate:all` before starting services.
+- **AWS / container:** every microservice's `create_app()` calls
+  `run_migrations()` from `middleware/shared/auto_migrate.py` on
+  startup — runs `alembic upgrade head` (idempotent, skips if at
+  head already).
+
+If you need to run manually or check status:
+
+```bash
+npm run db:migrate:all                # run all 7 service migrations
+npm run db:status                     # show current revision per schema
+```
+
+Each service owns its own Postgres **schema** inside the shared
+`in_home_care_platform` database (no table collisions):
+
+| Service | Schema | Tables |
+|---|---|---|
+| `auth_svc` | `auth_schema` | users, sessions |
+| `member_svc` | `member_schema` | members |
+| `appointment_svc` | `appointment_schema` | appointments |
+| `visit_management_svc` | `visit_schema` | visits |
+| `visit_ingest_svc` | `visit_ingest_schema` | visit_documents |
+| `document_intelligence_svc` | `doc_intel_schema` | extracted_fields |
+| `collection_ingest_svc` | `collection_schema` | collections, ingest_jobs |
 
 ### Test + lint
 
