@@ -131,7 +131,23 @@ cmd_up() {
 
   if [ -z "$public_url" ]; then
     echo "slack-tunnel: timed out waiting for ngrok to expose a public URL"
-    echo "  See $LOG_FILE for details."
+    if [ -f "$LOG_FILE" ] && grep -q "ERR_NGROK_4018\|authentication failed" "$LOG_FILE" 2>/dev/null; then
+      echo ""
+      echo "  ngrok refused to start because no authtoken is installed."
+      echo "  ngrok 3.x requires a free authtoken — this is a one-time"
+      echo "  per-laptop step you have to do by hand:"
+      echo ""
+      echo "    1. Sign up (free):  https://dashboard.ngrok.com/signup"
+      echo "    2. Copy your token: https://dashboard.ngrok.com/get-started/your-authtoken"
+      echo "    3. Install it:      ngrok config add-authtoken <YOUR_TOKEN>"
+      echo ""
+      echo "  Then rerun: npm run local:slack:tunnel:up"
+      echo ""
+      echo "  Or run: npm run setup:local:ngrok"
+      echo "  to walk through both ngrok install + auth at once."
+    else
+      echo "  See $LOG_FILE for details."
+    fi
     cmd_down
     exit 1
   fi

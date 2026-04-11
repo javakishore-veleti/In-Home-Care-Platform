@@ -4,7 +4,7 @@
   "private": true,
   "description": "npm task runner for ALL local dev operations — venv, docker, middleware, portals",
   "scripts": {
-    "setup:local:all": "npm run setup:local:venv:create && npm run setup:local:venv:install && npm run setup:local:portals:install && npm run setup:local:docker:up && npm run db:migrate:all",
+    "setup:local:all": "npm run setup:local:venv:create && npm run setup:local:venv:install && npm run setup:local:portals:install && npm run setup:local:docker:up && npm run db:migrate:all && (npm run setup:local:ngrok || true)",
 
     "setup:local:venv:create": "bash -c 'VENV=$HOME/runtime_data/python_venvs/In-Home-Care-Platform; if [ ! -d \"$VENV\" ]; then echo \"[venv] creating conda env at $VENV\"; conda create -y -p \"$VENV\" python=3.13; else echo \"[venv] reusing $VENV\"; fi'",
     "setup:local:venv:install": "bash -c 'VENV=$HOME/runtime_data/python_venvs/In-Home-Care-Platform; \"$VENV/bin/pip\" install --upgrade pip && \"$VENV/bin/pip\" install -r requirements.txt && echo \"[venv] all Python deps installed\"'",
@@ -47,6 +47,7 @@
     "local:slack:tunnel:up": "bash DevOps/Local/slack-tunnel.sh up",
     "local:slack:tunnel:down": "bash DevOps/Local/slack-tunnel.sh down",
     "local:slack:tunnel:status": "bash DevOps/Local/slack-tunnel.sh status",
+    "setup:local:ngrok": "bash DevOps/Local/setup-ngrok.sh",
     "local:status-all": "npm run setup:local:docker:status && npm run local:middleware:status-all && npm run local:portals:status-all",
     "local:status": "bash -c 'echo \"=== Docker ===\"; bash DevOps/Local/docker-all-status.sh 2>/dev/null | tail -n +1; echo; echo \"=== Middleware (port healthz probe) ===\"; for entry in api_gateway:8001 auth_svc:8002 member_svc:8003 appointment_svc:8004 visit_management_svc:8005 visit_ingest_svc:8006 document_intelligence_svc:8007 mcp_gateway:8008 slack_svc:8009; do svc=\"${entry%:*}\"; port=\"${entry#*:}\"; if curl -fs --max-time 1 http://127.0.0.1:$port/healthz >/dev/null 2>&1; then printf \"  [running] %-26s :%s\\n\" \"$svc\" \"$port\"; else printf \"  [stopped] %-26s :%s\\n\" \"$svc\" \"$port\"; fi; done; echo; echo \"=== Portals (port probe) ===\"; for entry in member_portal:3001 care_admin_portal:3002 customer_support_app:3003; do svc=\"${entry%:*}\"; port=\"${entry#*:}\"; if curl -fs --max-time 1 http://127.0.0.1:$port >/dev/null 2>&1; then printf \"  [running] %-26s :%s\\n\" \"$svc\" \"$port\"; else printf \"  [stopped] %-26s :%s\\n\" \"$svc\" \"$port\"; fi; done; echo; echo \"=== Tooling (port probe) ===\"; if curl -fs --max-time 1 http://127.0.0.1:8088 >/dev/null 2>&1; then printf \"  [running] %-26s :%s\\n\" \"kafka-ui\" \"8088\"; else printf \"  [stopped] %-26s :%s\\n\" \"kafka-ui\" \"8088\"; fi'",
 
