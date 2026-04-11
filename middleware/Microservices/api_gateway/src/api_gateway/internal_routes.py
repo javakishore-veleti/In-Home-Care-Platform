@@ -25,8 +25,11 @@ def lookup_slack_integration(
     event_type: str,
     slack_integration_store=Depends(get_slack_integration_store),
 ) -> dict[str, Any]:
-    """Return the active (channel_id, channel_name) for an event_type, or
-    ``{integration: null}`` if none is configured. Callers fall back to
-    their default channel env var when the response is null."""
-    integration = slack_integration_store.find_enabled_for_event(event_type)
-    return {'integration': integration}
+    """Return *all* active integrations for an event_type.
+
+    Response shape: ``{integrations: [{slack_channel_id, slack_channel_name, ...}, ...]}``.
+    Empty list means no rows were configured — slack_svc treats that as
+    "use the env-var default channel".
+    """
+    integrations = slack_integration_store.list_enabled_for_event(event_type)
+    return {'integrations': integrations}

@@ -93,15 +93,30 @@ def attach_slack_message(
     payload: AppointmentSlackMessageUpdate,
     store: AppointmentStore = Depends(get_store),
 ) -> AppointmentResponse:
-    """Stamp Slack channel + message timestamp on the appointment row.
+    """Record a successful chat.postMessage for one channel.
 
-    Called by slack_svc after a successful chat.postMessage so that subsequent
-    consumer redeliveries can dedupe (skip when slack_message_ts is set).
+    Called by slack_svc after every successful post in the fan-out
+    loop. Idempotent per (appointment_id, slack_channel_id) thanks to
+    the UNIQUE constraint on appointment_slack_posts.
     """
-    appointment = store.get_appointment(appointment_id)
-    if appointment.get('slack_message_ts'):
-        return AppointmentResponse(**appointment)
-    return AppointmentResponse(**store.attach_slack_message(appointment_id, payload.slack_channel_id, payload.slack_message_ts))
+    store.get_appointment(appointment_id)  # 404 if missing
+    return AppointmentResponse(
+        **store.attach_slack_message(appointment_id, payload.slack_channel_id, payload.slack_message_ts)
+    )
+
+
+@router.get('/appointments/{appointment_id}/slack-posts')
+def list_slack_posts(
+    appointment_id: int,
+    store: AppointmentStore = Depends(get_store),
+) -> dict[str, list[dict]]:
+    """Return every channel this appointment has been posted to.
+
+    slack_svc consults this before each post in its fan-out loop to
+    avoid double-posting on a Kafka redelivery.
+    """
+    store.get_appointment(appointment_id)  # 404 if missing
+    return {'items': store.list_slack_posts(appointment_id)}
 
 
 @router.post('/appointments/{appointment_id}/claim', response_model=AppointmentClaimResponse)

@@ -47,14 +47,13 @@ async def attach_slack_message(
     return resp.json()
 
 
-async def lookup_slack_integration(event_type: str) -> dict[str, Any] | None:
-    """Ask api_gateway for the channel currently mapped to ``event_type``.
+async def lookup_slack_integrations(event_type: str) -> list[dict[str, Any]]:
+    """Ask api_gateway for *every* enabled channel mapped to ``event_type``.
 
-    Returns the integration row dict (with ``slack_channel_id`` /
-    ``slack_channel_name``) or ``None`` if no row exists or the gateway
-    is unreachable. Callers fall back to their own default channel
-    constant on ``None`` so a transient gateway hiccup never blocks a
-    Slack post.
+    Returns the full list (possibly multiple channels for fan-out) or
+    an empty list if nothing is configured / the gateway is unreachable.
+    Callers fall back to their default channel constant when the list
+    is empty so a transient gateway hiccup never blocks a Slack post.
     """
     url = f'{API_GATEWAY_URL}/api/internal/slack/integrations/lookup'
     try:
@@ -63,9 +62,22 @@ async def lookup_slack_integration(event_type: str) -> dict[str, Any] | None:
         resp.raise_for_status()
     except httpx.HTTPError as exc:
         log.warning('slack_integration_lookup.failed event_type=%s error=%s', event_type, exc)
-        return None
+        return []
     body = resp.json()
-    return body.get('integration')
+    return body.get('integrations') or []
+
+
+async def list_slack_posts(appointment_id: int) -> list[dict[str, Any]]:
+    """Return every Slack channel this appointment has already been posted to."""
+    url = f'{APPOINTMENT_SVC_URL}/appointments/{appointment_id}/slack-posts'
+    try:
+        async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
+            resp = await client.get(url)
+        resp.raise_for_status()
+    except httpx.HTTPError as exc:
+        log.warning('slack_posts.list_failed id=%s error=%s', appointment_id, exc)
+        return []
+    return (resp.json() or {}).get('items') or []
 
 
 async def claim_appointment(

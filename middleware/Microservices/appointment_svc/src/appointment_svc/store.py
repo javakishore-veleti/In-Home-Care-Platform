@@ -284,24 +284,106 @@ class AppointmentStore(BaseStore):
         return self._with_claim_metadata(updated)
 
     def attach_slack_message(self, appointment_id: int, channel_id: str, message_ts: str) -> dict[str, Any]:
-        """Persist the Slack message coordinates onto the appointment row."""
+        """Record a successful chat.postMessage for one channel.
+
+        Two side effects:
+          1. INSERTs into ``appointment_slack_posts`` so subsequent
+             redeliveries can dedupe per channel.
+          2. The legacy ``appointments.slack_channel_id`` /
+             ``slack_message_ts`` columns are populated only on the very
+             first post (whichever channel won the race) so the existing
+             admin detail page keeps rendering something. Multi-channel
+             callers should query ``list_slack_posts(appointment_id)``
+             for the full per-channel picture.
+        """
         if self.using_db:
             self.execute(
                 '''
+                INSERT INTO appointment_schema.appointment_slack_posts (
+                    appointment_id, slack_channel_id, slack_message_ts, posted_at
+                )
+                VALUES (%s, %s, %s, %s)
+                ON CONFLICT (appointment_id, slack_channel_id) DO NOTHING
+                ''',
+                (appointment_id, channel_id, message_ts, now_utc()),
+            )
+            self.execute(
+                '''
                 UPDATE appointment_schema.appointments
-                SET slack_channel_id = %s, slack_message_ts = %s, updated_at = %s
+                SET slack_channel_id = COALESCE(slack_channel_id, %s),
+                    slack_message_ts = COALESCE(slack_message_ts, %s),
+                    updated_at = %s
                 WHERE id = %s
                 ''',
                 (channel_id, message_ts, now_utc(), appointment_id),
             )
             return self.get_appointment(appointment_id)
-        updated = self.memory.update(
-            self._memory_key('appointments'),
-            appointment_id,
-            {'slack_channel_id': channel_id, 'slack_message_ts': message_ts, 'updated_at': now_utc()},
+        # Memory backend
+        existing_posts = self.memory.list(
+            self._memory_key('slack_posts'),
+            predicate=lambda row: row.get('appointment_id') == appointment_id and row.get('slack_channel_id') == channel_id,
         )
+        if not existing_posts:
+            self.memory.insert(
+                self._memory_key('slack_posts'),
+                {
+                    'appointment_id': appointment_id,
+                    'slack_channel_id': channel_id,
+                    'slack_message_ts': message_ts,
+                    'posted_at': now_utc(),
+                },
+            )
+        appt = self.memory.get(self._memory_key('appointments'), appointment_id)
+        updates: dict[str, Any] = {'updated_at': now_utc()}
+        if appt and not appt.get('slack_channel_id'):
+            updates['slack_channel_id'] = channel_id
+        if appt and not appt.get('slack_message_ts'):
+            updates['slack_message_ts'] = message_ts
+        updated = self.memory.update(self._memory_key('appointments'), appointment_id, updates)
         assert updated is not None
         return self._with_claim_metadata(updated)
+
+    def has_slack_post(self, appointment_id: int, channel_id: str) -> bool:
+        """True if (appointment, channel) has already been posted to.
+
+        Used by slack_svc as the per-channel dedupe check before posting:
+        a Kafka redelivery on a single appointment may need to skip
+        channels that already received the message in a previous run.
+        """
+        if self.using_db:
+            row = self.fetch_one(
+                '''
+                SELECT 1 AS found
+                FROM appointment_schema.appointment_slack_posts
+                WHERE appointment_id = %s AND slack_channel_id = %s
+                LIMIT 1
+                ''',
+                (appointment_id, channel_id),
+            )
+            return bool(row)
+        rows = self.memory.list(
+            self._memory_key('slack_posts'),
+            predicate=lambda row: row.get('appointment_id') == appointment_id and row.get('slack_channel_id') == channel_id,
+        )
+        return bool(rows)
+
+    def list_slack_posts(self, appointment_id: int) -> list[dict[str, Any]]:
+        """All channels this appointment has been posted to."""
+        if self.using_db:
+            return self.fetch_all(
+                '''
+                SELECT id, appointment_id, slack_channel_id, slack_message_ts, posted_at
+                FROM appointment_schema.appointment_slack_posts
+                WHERE appointment_id = %s
+                ORDER BY posted_at ASC
+                ''',
+                (appointment_id,),
+            )
+        return self.memory.list(
+            self._memory_key('slack_posts'),
+            predicate=lambda row: row.get('appointment_id') == appointment_id,
+            sort_key=lambda row: row.get('posted_at'),
+        )
 
     def claim_appointment_via_slack(
         self,

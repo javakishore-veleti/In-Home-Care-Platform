@@ -61,41 +61,78 @@ async def handle_appointment_event(event: dict[str, Any]) -> bool:
         log.info('slack_svc.appointment_cancelled', extra={'appointment_id': appointment_id})
         return True
 
-    if appointment.get('slack_message_ts'):
-        log.info('slack_svc.dedup_skip', extra={'appointment_id': appointment_id})
-        return True
-
     text, blocks = appointment_request(appointment)
-    # Pick the destination channel from the admin-managed integrations
-    # table first; fall back to the env-var default when no row exists
+
+    # Resolve the destination channel set from the admin-managed
+    # integrations table. Fan-out: every enabled row receives the post.
+    # Empty list (no rows configured) -> fall back to env var default
     # so a fresh DB still works without any UI configuration.
-    integration = await client.lookup_slack_integration(APPOINTMENT_BOOKED)
-    target_channel = (integration or {}).get('slack_channel_id') or APPOINTMENT_REQUESTS_CHANNEL
-    result = post_message(target_channel, text=text, blocks=blocks)
-    if not result or not result.get('ok'):
-        # Slack down or rate-limited — let Kafka redeliver.
-        log.warning(
-            'slack_svc.post_failed',
-            extra={'appointment_id': appointment_id, 'slack_error': (result or {}).get('error')},
-        )
-        return False
+    integrations = await client.lookup_slack_integrations(APPOINTMENT_BOOKED)
+    if not integrations:
+        targets = [{'slack_channel_id': APPOINTMENT_REQUESTS_CHANNEL, 'slack_channel_name': APPOINTMENT_REQUESTS_CHANNEL}]
+    else:
+        targets = integrations
 
-    channel_id = result.get('channel')
-    ts = result.get('ts')
-    if not channel_id or not ts:
-        log.warning('slack_svc.post_no_ts', extra={'appointment_id': appointment_id, 'result': result})
-        return True
+    # Per-channel dedupe via the appointment_slack_posts table — a
+    # Kafka redelivery never re-posts to a channel it already hit.
+    already_posted = {row.get('slack_channel_id') for row in await client.list_slack_posts(int(appointment_id))}
 
-    try:
-        await client.attach_slack_message(int(appointment_id), channel_id, ts)
-    except httpx.HTTPError as exc:
-        # Slack post succeeded but we failed to record the ts. Don't redeliver
-        # (would post twice). Log loudly so this can be reconciled.
-        log.error(
-            'slack_svc.attach_message_failed',
-            extra={'appointment_id': appointment_id, 'channel_id': channel_id, 'ts': ts, 'error': str(exc)},
-        )
-    return True
+    any_failure = False
+    posted_count = 0
+    for target in targets:
+        target_channel = target.get('slack_channel_id')
+        if not target_channel:
+            continue
+        if target_channel in already_posted:
+            log.info(
+                'slack_svc.dedup_skip appointment_id=%s channel=%s',
+                appointment_id,
+                target_channel,
+            )
+            continue
+        result = post_message(target_channel, text=text, blocks=blocks)
+        if not result or not result.get('ok'):
+            log.warning(
+                'slack_svc.post_failed appointment_id=%s channel=%s slack_error=%s',
+                appointment_id,
+                target_channel,
+                (result or {}).get('error'),
+            )
+            any_failure = True
+            continue
+        landed_channel = result.get('channel') or target_channel
+        ts = result.get('ts')
+        if not ts:
+            log.warning('slack_svc.post_no_ts appointment_id=%s channel=%s', appointment_id, landed_channel)
+            continue
+        try:
+            await client.attach_slack_message(int(appointment_id), landed_channel, ts)
+            posted_count += 1
+        except httpx.HTTPError as exc:
+            # Slack post succeeded but we failed to record the post.
+            # Don't redeliver (would post twice). Log loudly so this
+            # can be reconciled — the dedupe table is now out of sync
+            # with reality for this (appointment, channel) pair.
+            log.error(
+                'slack_svc.attach_message_failed appointment_id=%s channel=%s ts=%s error=%s',
+                appointment_id,
+                landed_channel,
+                ts,
+                str(exc),
+            )
+
+    log.info(
+        'slack_svc.fanout_done appointment_id=%s posted=%s targets=%s already=%s',
+        appointment_id,
+        posted_count,
+        len(targets),
+        len(already_posted),
+    )
+    # Returning False forces Kafka to redeliver the entire message,
+    # which the dedupe table will then handle gracefully (skipping
+    # channels that already landed). Only do that on a real Slack
+    # failure so a partial fan-out gets a second chance.
+    return not any_failure
 
 
 async def start_consumer_task(stop_event: asyncio.Event) -> None:

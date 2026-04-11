@@ -41,26 +41,29 @@ class SlackIntegrationStore(BaseStore):
             rows = [row for row in rows if row.get('event_type') == event_type]
         return sorted(rows, key=lambda row: (row.get('event_type', ''), row.get('slack_channel_name', '')))
 
-    def find_enabled_for_event(self, event_type: str) -> dict[str, Any] | None:
-        """Return the first enabled integration row for ``event_type`` or None."""
+    def list_enabled_for_event(self, event_type: str) -> list[dict[str, Any]]:
+        """Return *every* enabled integration row for ``event_type``.
+
+        slack_svc fans the message out to every row in this list,
+        deduping per (appointment_id, channel_id) so a Kafka redelivery
+        never re-posts to a channel it already hit.
+        """
         if self.using_db:
-            return self.fetch_one(
+            return self.fetch_all(
                 '''
                 SELECT id, slack_channel_id, slack_channel_name, event_type, enabled,
                        created_at, updated_at
                 FROM member_schema.slack_channel_integrations
                 WHERE event_type = %s AND enabled = TRUE
                 ORDER BY id ASC
-                LIMIT 1
                 ''',
                 (event_type,),
             )
-        rows = [
+        return [
             row
             for row in self.memory.list(self._memory_key('integrations'))
             if row.get('event_type') == event_type and row.get('enabled', True)
         ]
-        return rows[0] if rows else None
 
     def upsert_integration(
         self,

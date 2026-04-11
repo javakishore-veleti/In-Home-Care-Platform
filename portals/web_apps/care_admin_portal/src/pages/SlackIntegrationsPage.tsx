@@ -132,6 +132,8 @@ export function SlackIntegrationsPage() {
         </div>
       )}
 
+      {data && data.channels.length > 0 && <FanoutBanner channels={data.channels} />}
+
       {data && data.channels.length > 0 && (
         <div className="bg-white rounded-xl shadow overflow-hidden">
           <table className="w-full text-left border-collapse">
@@ -225,6 +227,32 @@ export function SlackIntegrationsPage() {
           </table>
         </div>
       )}
+    </div>
+  )
+}
+
+function FanoutBanner({ channels }: { channels: SlackChannelRow[] }) {
+  const counts: Record<string, number> = {}
+  for (const ch of channels) {
+    for (const integ of ch.integrations) {
+      if (integ.enabled) {
+        counts[integ.event_type] = (counts[integ.event_type] ?? 0) + 1
+      }
+    }
+  }
+  const fanout = Object.entries(counts).filter(([, n]) => n > 1)
+  if (fanout.length === 0) return null
+  return (
+    <div className="text-xs bg-[#1976D2]/10 border border-[#1976D2]/20 text-[#1A2B3C] rounded px-3 py-2">
+      <strong>Fan-out active:</strong> the events below are wired to multiple channels — every enabled channel
+      receives each message. slack_svc dedupes per (appointment, channel) so a redelivery never re-posts.
+      <ul className="mt-1 ml-4 list-disc">
+        {fanout.map(([eventType, n]) => (
+          <li key={eventType}>
+            <code>{eventType}</code> → <strong>{n}</strong> channels
+          </li>
+        ))}
+      </ul>
     </div>
   )
 }
