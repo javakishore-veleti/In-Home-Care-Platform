@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 
 import { useAuth } from '../context/AuthContext'
 import { api, ApiError } from '../lib/api'
-import type { Address } from '../types'
+import type { AddressListResponse } from '../types'
 
 const emptyAddress = {
   label: 'Home',
@@ -15,6 +15,16 @@ const emptyAddress = {
   is_default: false,
 }
 
+const emptyAddressResponse: AddressListResponse = {
+  items: [],
+  page: 1,
+  page_size: 8,
+  total: 0,
+  total_pages: 1,
+}
+
+const ADDRESS_PAGE_SIZE = 8
+
 export function ProfilePage() {
   const { token, member, setSessionState, user } = useAuth()
   const [profileForm, setProfileForm] = useState({
@@ -25,11 +35,16 @@ export function ProfilePage() {
     dob: member?.dob ?? '',
     insurance_id: member?.insurance_id ?? '',
   })
-  const [addresses, setAddresses] = useState<Address[]>([])
+  const [addressData, setAddressData] = useState<AddressListResponse>(emptyAddressResponse)
   const [addressForm, setAddressForm] = useState(emptyAddress)
   const [editingAddressId, setEditingAddressId] = useState<number | null>(null)
-  const [statusMessage, setStatusMessage] = useState('')
-  const [error, setError] = useState('')
+  const [profileStatusMessage, setProfileStatusMessage] = useState('')
+  const [profileError, setProfileError] = useState('')
+  const [addressStatusMessage, setAddressStatusMessage] = useState('')
+  const [addressError, setAddressError] = useState('')
+  const [addressQuery, setAddressQuery] = useState('')
+  const [addressPage, setAddressPage] = useState(1)
+  const [addressLoading, setAddressLoading] = useState(false)
 
   useEffect(() => {
     setProfileForm({
@@ -42,53 +57,65 @@ export function ProfilePage() {
     })
   }, [member])
 
-  useEffect(() => {
+  const loadAddresses = useCallback(async (query = addressQuery, page = addressPage) => {
     if (!token) {
       return
     }
-    void api.listAddresses(token).then(setAddresses).catch(() => setError('Unable to load addresses.'))
-  }, [token])
+    setAddressLoading(true)
+    try {
+      const params = new URLSearchParams({
+        query,
+        page: String(page),
+        page_size: String(ADDRESS_PAGE_SIZE),
+      })
+      const nextData = await api.searchAddresses(token, params)
+      setAddressData(nextData)
+    } catch {
+      setAddressError('Unable to load saved addresses.')
+    } finally {
+      setAddressLoading(false)
+    }
+  }, [addressPage, addressQuery, token])
 
-  const defaultAddress = useMemo(() => addresses.find((address) => address.is_default), [addresses])
+  useEffect(() => {
+    void loadAddresses()
+  }, [loadAddresses])
 
   const saveProfile = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (!token || !member || !user) return
-    setError('')
-    setStatusMessage('')
+    setProfileError('')
+    setProfileStatusMessage('')
     try {
       const updated = await api.updateProfile(token, profileForm)
       setSessionState({ user, member: updated })
-      setStatusMessage('Profile settings saved.')
+      setProfileStatusMessage('Profile settings saved.')
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Unable to save profile.')
+      setProfileError(err instanceof ApiError ? err.message : 'Unable to save profile.')
     }
   }
 
   const saveAddress = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (!token) return
-    setError('')
+    setAddressError('')
+    setAddressStatusMessage('')
     try {
-      const nextAddress = editingAddressId
+      await (editingAddressId
         ? await api.updateAddress(token, editingAddressId, addressForm)
-        : await api.createAddress(token, addressForm)
-      let nextAddresses = editingAddressId
-        ? addresses.map((address) => (address.id === editingAddressId ? nextAddress : address))
-        : [...addresses, nextAddress]
-      if (nextAddress.is_default) {
-        nextAddresses = nextAddresses.map((address) => ({ ...address, is_default: address.id === nextAddress.id }))
-      }
-      setAddresses(nextAddresses)
+        : await api.createAddress(token, addressForm))
       setAddressForm(emptyAddress)
       setEditingAddressId(null)
-      setStatusMessage('Address saved successfully.')
+      setAddressQuery('')
+      setAddressPage(1)
+      await loadAddresses('', 1)
+      setAddressStatusMessage('Address saved successfully.')
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Unable to save address.')
+      setAddressError(err instanceof ApiError ? err.message : 'Unable to save address.')
     }
   }
 
-  const editAddress = (address: Address) => {
+  const editAddress = (address: AddressListResponse['items'][number]) => {
     setEditingAddressId(address.id)
     setAddressForm({
       label: address.label,
@@ -104,16 +131,32 @@ export function ProfilePage() {
 
   const makeDefault = async (addressId: number) => {
     if (!token) return
-    const nextDefault = await api.setDefaultAddress(token, addressId)
-    setAddresses(addresses.map((address) => ({ ...address, is_default: address.id === nextDefault.id })))
+    setAddressError('')
+    setAddressStatusMessage('')
+    try {
+      await api.setDefaultAddress(token, addressId)
+      await loadAddresses()
+      setAddressStatusMessage('Default address updated.')
+    } catch (err) {
+      setAddressError(err instanceof ApiError ? err.message : 'Unable to update the default address.')
+    }
   }
 
   const removeAddress = async (addressId: number) => {
     if (!token) return
-    await api.deleteAddress(token, addressId)
-    const refreshed = await api.listAddresses(token)
-    setAddresses(refreshed)
+    setAddressError('')
+    setAddressStatusMessage('')
+    try {
+      await api.deleteAddress(token, addressId)
+      await loadAddresses()
+      setAddressStatusMessage('Address deleted.')
+    } catch (err) {
+      setAddressError(err instanceof ApiError ? err.message : 'Unable to delete the address.')
+    }
   }
+
+  const showingFrom = addressData.total === 0 ? 0 : (addressData.page - 1) * addressData.page_size + 1
+  const showingTo = addressData.total === 0 ? 0 : showingFrom + addressData.items.length - 1
 
   return (
     <div className="stack-xl">
@@ -123,7 +166,6 @@ export function ProfilePage() {
             <p className="eyebrow">Profile settings</p>
             <h2>Keep your care details up to date</h2>
           </div>
-          {defaultAddress ? <span className="tag">Default address: {defaultAddress.label}</span> : null}
         </div>
         <form className="form-grid two-col" onSubmit={saveProfile}>
           <label>
@@ -154,19 +196,56 @@ export function ProfilePage() {
             <button className="primary-button" type="submit">Save profile</button>
           </div>
         </form>
-        {statusMessage ? <p className="success-text">{statusMessage}</p> : null}
-        {error ? <p className="error-text">{error}</p> : null}
+        {profileStatusMessage ? <p className="success-text">{profileStatusMessage}</p> : null}
+        {profileError ? <p className="error-text">{profileError}</p> : null}
       </section>
 
+      <section className="search-surface">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">Addresses</p>
+            <h2>Find and manage saved addresses</h2>
+            <p className="muted">Use search and pagination so home, family, and recurring care addresses stay manageable as the directory grows.</p>
+          </div>
+        </div>
+        <div className="search-input-shell">
+          <span className="search-icon">⌕</span>
+          <input
+            placeholder="Search by label, street, city, state, ZIP, instructions, or address ID"
+            value={addressQuery}
+            onChange={(event) => {
+              setAddressQuery(event.target.value)
+              setAddressPage(1)
+            }}
+          />
+          <span className="tag">{addressData.total} addresses</span>
+        </div>
+      </section>
+      <div className="stats-strip compact">
+        <div className="metric-card">
+          <strong>{addressData.total}</strong>
+          <span>Saved addresses</span>
+        </div>
+        <div className="metric-card">
+          <strong>{addressData.items.length}</strong>
+          <span>Showing on this page</span>
+        </div>
+        <div className="metric-card">
+          <strong>{addressData.page}</strong>
+          <span>Page of {addressData.total_pages}</span>
+        </div>
+      </div>
       <section className="card stack-md">
         <div className="section-heading">
           <div>
-            <p className="eyebrow">Service locations</p>
-            <h2>Manage multiple saved addresses</h2>
+            <p className="eyebrow">Results</p>
+            <h2>Your addresses</h2>
+            <p className="muted">Review, edit, and set a default address without scrolling through one long list.</p>
           </div>
         </div>
+        {addressLoading ? <p className="muted">Loading addresses…</p> : null}
         <div className="address-grid">
-          {addresses.map((address) => (
+          {addressData.items.map((address) => (
             <article className="subcard" key={address.id}>
               <div className="row-between">
                 <strong>{address.label}</strong>
@@ -182,6 +261,30 @@ export function ProfilePage() {
               </div>
             </article>
           ))}
+          {!addressLoading && addressData.items.length === 0 ? (
+            <div className="subcard empty-state-card">
+              {addressData.total === 0 && addressQuery.trim().length === 0
+                ? 'No saved addresses yet.'
+                : 'No addresses match your search.'}
+            </div>
+          ) : null}
+        </div>
+        <div className="pagination-row">
+          <button className="secondary-button" disabled={addressData.page <= 1} onClick={() => setAddressPage(addressData.page - 1)}>Previous</button>
+          <span>
+            Showing {showingFrom}-{showingTo} of {addressData.total}
+          </span>
+          <button className="secondary-button" disabled={addressData.page >= addressData.total_pages} onClick={() => setAddressPage(addressData.page + 1)}>Next</button>
+        </div>
+        {addressStatusMessage ? <p className="success-text">{addressStatusMessage}</p> : null}
+        {addressError ? <p className="error-text">{addressError}</p> : null}
+      </section>
+      <section className="card stack-md">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">{editingAddressId ? 'Update address' : 'Add address'}</p>
+            <h2>{editingAddressId ? 'Edit address' : 'Add an address'}</h2>
+          </div>
         </div>
         <form className="form-grid two-col" onSubmit={saveAddress}>
           <label>

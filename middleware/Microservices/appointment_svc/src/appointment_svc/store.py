@@ -22,6 +22,8 @@ class AppointmentStore(BaseStore):
             'service_area': payload.service_area,
             'requested_date': payload.requested_date,
             'requested_time_slot': payload.requested_time_slot,
+            'preferred_hour': payload.preferred_hour,
+            'preferred_minute': payload.preferred_minute,
             'scheduled_start': payload.scheduled_start,
             'scheduled_end': payload.scheduled_end,
             'reason': payload.reason,
@@ -37,12 +39,12 @@ class AppointmentStore(BaseStore):
                 '''
                 INSERT INTO appointment_schema.appointments (
                     member_id, address_id, service_type, service_area, requested_date,
-                    requested_time_slot, scheduled_start, scheduled_end, reason, status,
+                    requested_time_slot, preferred_hour, preferred_minute, scheduled_start, scheduled_end, reason, status,
                     assigned_staff_id, notes, created_at, updated_at, cancelled_at
                 )
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 RETURNING id, member_id, address_id, service_type, service_area, requested_date,
-                          requested_time_slot, scheduled_start, scheduled_end, reason, status,
+                          requested_time_slot, preferred_hour, preferred_minute, scheduled_start, scheduled_end, reason, status,
                           assigned_staff_id, notes, created_at, updated_at, cancelled_at
                 ''',
                 (
@@ -52,6 +54,8 @@ class AppointmentStore(BaseStore):
                     record['service_area'],
                     record['requested_date'],
                     record['requested_time_slot'],
+                    record['preferred_hour'],
+                    record['preferred_minute'],
                     record['scheduled_start'],
                     record['scheduled_end'],
                     record['reason'],
@@ -70,15 +74,20 @@ class AppointmentStore(BaseStore):
         *,
         member_id: int,
         query: str | None = None,
+        service_type: str | None = None,
         page: int = 1,
         page_size: int = 10,
     ) -> dict[str, Any]:
         safe_page = max(1, page)
         safe_page_size = max(1, min(page_size, 50))
         search = (query or '').strip().lower()
+        service_type_filter = (service_type or '').strip().lower()
         if self.using_db:
             params: list[Any] = [member_id]
             where = ['member_id = %s']
+            if service_type_filter:
+                where.append('LOWER(service_type) = %s')
+                params.append(service_type_filter)
             if search:
                 where.append("(CAST(id AS TEXT) ILIKE %s OR service_type ILIKE %s OR COALESCE(service_area, '') ILIKE %s OR status ILIKE %s)")
                 match = f'%{search}%'
@@ -92,7 +101,7 @@ class AppointmentStore(BaseStore):
             items = self.fetch_all(
                 f'''
                 SELECT id, member_id, address_id, service_type, service_area, requested_date,
-                       requested_time_slot, scheduled_start, scheduled_end, reason, status,
+                       requested_time_slot, preferred_hour, preferred_minute, scheduled_start, scheduled_end, reason, status,
                        assigned_staff_id, notes, created_at, updated_at, cancelled_at
                 FROM appointment_schema.appointments
                 WHERE {where_sql}
@@ -105,7 +114,7 @@ class AppointmentStore(BaseStore):
         else:
             items = self.memory.list(
                 self._memory_key('appointments'),
-                predicate=lambda row: row['member_id'] == member_id and self._matches(row, search),
+                predicate=lambda row: row['member_id'] == member_id and self._matches_service_type(row, service_type_filter) and self._matches(row, search),
                 sort_key=lambda row: (row['requested_date'], row['id']),
                 reverse=True,
             )
@@ -121,12 +130,17 @@ class AppointmentStore(BaseStore):
             'total_pages': total_pages,
         }
 
+    def _matches_service_type(self, row: dict[str, Any], service_type: str) -> bool:
+        if not service_type:
+            return True
+        return str(row.get('service_type', '')).strip().lower() == service_type
+
     def get_appointment(self, appointment_id: int) -> dict[str, Any]:
         if self.using_db:
             row = self.fetch_one(
                 '''
                 SELECT id, member_id, address_id, service_type, service_area, requested_date,
-                       requested_time_slot, scheduled_start, scheduled_end, reason, status,
+                       requested_time_slot, preferred_hour, preferred_minute, scheduled_start, scheduled_end, reason, status,
                        assigned_staff_id, notes, created_at, updated_at, cancelled_at
                 FROM appointment_schema.appointments
                 WHERE id = %s
@@ -159,7 +173,7 @@ class AppointmentStore(BaseStore):
                 SET {', '.join(assignments)}
                 WHERE id = %s
                 RETURNING id, member_id, address_id, service_type, service_area, requested_date,
-                          requested_time_slot, scheduled_start, scheduled_end, reason, status,
+                          requested_time_slot, preferred_hour, preferred_minute, scheduled_start, scheduled_end, reason, status,
                           assigned_staff_id, notes, created_at, updated_at, cancelled_at
                 ''',
                 tuple(values),
@@ -180,7 +194,7 @@ class AppointmentStore(BaseStore):
                 SET status = 'cancelled', cancelled_at = %s, updated_at = %s
                 WHERE id = %s
                 RETURNING id, member_id, address_id, service_type, service_area, requested_date,
-                          requested_time_slot, scheduled_start, scheduled_end, reason, status,
+                          requested_time_slot, preferred_hour, preferred_minute, scheduled_start, scheduled_end, reason, status,
                           assigned_staff_id, notes, created_at, updated_at, cancelled_at
                 ''',
                 (now_utc(), now_utc(), appointment_id),

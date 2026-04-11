@@ -29,45 +29,9 @@ export function SignInPage() {
   }
 
   return (
-    <div className="auth-page">
-      <div className="auth-layout">
-        <div className="card auth-aside">
-          <p className="eyebrow">Welcome back</p>
-          <h2>Everything important in one clear, organized place.</h2>
-          <p className="muted">
-            Designed for real member tasks: booking care, reviewing visit follow-up, and keeping service locations current.
-          </p>
-          <AuthCareIllustration title="Appointments, visit updates, and account details stay connected." />
-          <div className="support-stat-grid">
-            <div className="support-stat">
-              <strong>Search fast</strong>
-              <span>Appointments and visit history</span>
-            </div>
-            <div className="support-stat">
-              <strong>Stay aligned</strong>
-              <span>Documents, notes, and next steps</span>
-            </div>
-            <div className="support-stat">
-              <strong>Get help</strong>
-              <span>Concierge chat after sign-in</span>
-            </div>
-          </div>
-          <ul className="feature-list">
-            <li className="feature-item">
-              <strong>Appointment clarity</strong>
-              <span>Quickly find upcoming requests and review status changes.</span>
-            </li>
-            <li className="feature-item">
-              <strong>Visit detail in one place</strong>
-              <span>See notes, decisions, action items, and documents without jumping around.</span>
-            </li>
-            <li className="feature-item">
-              <strong>Simple account management</strong>
-              <span>Update profile details and maintain multiple service addresses.</span>
-            </li>
-          </ul>
-        </div>
-        <form className="card auth-card" onSubmit={handleSubmit}>
+    <div className="auth-page compact-auth-page">
+      <div className="auth-layout compact-auth-layout">
+        <form className="card auth-card compact-auth-card" onSubmit={handleSubmit}>
           <p className="eyebrow">Sign in</p>
           <h1>Sign in to your account</h1>
           <p className="muted">Use the email and password linked to your member account.</p>
@@ -85,6 +49,24 @@ export function SignInPage() {
           </button>
           <p className="muted auth-footer-link">New here? <Link to="/signup">Create your account</Link>.</p>
         </form>
+        <div className="card auth-aside compact-auth-aside">
+          <p className="eyebrow">Welcome back</p>
+          <h2>Pick up where you left off.</h2>
+          <p className="muted">
+            Review appointments, check visit updates, and manage service details in one clear place.
+          </p>
+          <AuthCareIllustration title="Appointments, visit updates, and account details stay connected." />
+          <div className="support-stat-grid">
+            <div className="support-stat">
+              <strong>Find care details</strong>
+              <span>Appointments and visit history</span>
+            </div>
+            <div className="support-stat">
+              <strong>Ask for help</strong>
+              <span>Documents, notes, and next steps</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   )

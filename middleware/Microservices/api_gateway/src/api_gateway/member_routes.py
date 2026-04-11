@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 
 from appointment_svc.schemas import AppointmentListResponse, AppointmentResponse, AppointmentUpdate
-from member_svc.schemas import AddressCreate, AddressResponse, AddressUpdate, MemberProfile, MemberUpdate
+from member_svc.schemas import AddressCreate, AddressListResponse, AddressResponse, AddressUpdate, MemberProfile, MemberUpdate
 from visit_management_svc.schemas import (
     VisitActionItemResponse,
     VisitDecisionResponse,
@@ -33,6 +33,8 @@ class MemberAppointmentCreate(BaseModel):
     service_area: str | None = None
     requested_date: date
     requested_time_slot: str
+    preferred_hour: str | None = None
+    preferred_minute: str | None = None
     scheduled_start: datetime | None = None
     scheduled_end: datetime | None = None
     reason: str | None = None
@@ -68,6 +70,19 @@ def update_profile(payload: MemberUpdate, session: CurrentSession, member_store=
 @router.get('/addresses', response_model=list[AddressResponse])
 def list_addresses(session: CurrentSession, member_store=Depends(get_member_store)) -> list[AddressResponse]:
     return [AddressResponse(**row) for row in member_store.list_addresses(session.member['id'])]
+
+
+@router.get('/address-directory', response_model=AddressListResponse)
+def search_addresses(
+    session: CurrentSession,
+    query: str | None = None,
+    page: int = 1,
+    page_size: int = 10,
+    member_store=Depends(get_member_store),
+) -> AddressListResponse:
+    data = member_store.search_addresses(member_id=session.member['id'], query=query, page=page, page_size=page_size)
+    data['items'] = [AddressResponse(**row) for row in data['items']]
+    return AddressListResponse(**data)
 
 
 @router.post('/addresses', response_model=AddressResponse, status_code=status.HTTP_201_CREATED)
@@ -112,6 +127,7 @@ def create_appointment(
 def list_appointments(
     session: CurrentSession,
     query: str | None = None,
+    service_type: str | None = None,
     page: int = 1,
     page_size: int = 10,
     appointment_store=Depends(get_appointment_store),
@@ -119,6 +135,7 @@ def list_appointments(
     data = appointment_store.list_appointments(
         member_id=session.member['id'],
         query=query,
+        service_type=service_type,
         page=page,
         page_size=page_size,
     )

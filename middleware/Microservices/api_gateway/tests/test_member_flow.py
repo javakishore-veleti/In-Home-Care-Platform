@@ -49,6 +49,26 @@ def test_member_portal_gateway_flow() -> None:
     assert address.status_code == 201
     address_id = address.json()['id']
 
+    second_address = gateway.post(
+        '/api/member/addresses',
+        json={
+            'label': 'Parents',
+            'line1': '456 Family Drive',
+            'city': 'Austin',
+            'state': 'TX',
+            'postal_code': '78702',
+            'instructions': 'Use side entrance',
+        },
+        headers=headers,
+    )
+    assert second_address.status_code == 201
+
+    address_listing = gateway.get('/api/member/address-directory?query=Austin&page=1&page_size=1', headers=headers)
+    assert address_listing.status_code == 200
+    assert address_listing.json()['total'] == 2
+    assert address_listing.json()['page_size'] == 1
+    assert address_listing.json()['total_pages'] == 2
+
     appointment = gateway.post(
         '/api/member/appointments',
         json={
@@ -57,6 +77,8 @@ def test_member_portal_gateway_flow() -> None:
             'service_area': 'Post-discharge support',
             'requested_date': '2026-05-20',
             'requested_time_slot': 'Morning',
+            'preferred_hour': '09',
+            'preferred_minute': '30',
             'reason': 'Medication management',
             'notes': 'Recent discharge from hospital',
         },
@@ -64,6 +86,8 @@ def test_member_portal_gateway_flow() -> None:
     )
     assert appointment.status_code == 201
     appointment_id = appointment.json()['id']
+    assert appointment.json()['preferred_hour'] == '09'
+    assert appointment.json()['preferred_minute'] == '30'
 
     visit = visits.post(
         '/visits',
@@ -83,6 +107,10 @@ def test_member_portal_gateway_flow() -> None:
     listing = gateway.get('/api/member/appointments?query=Skilled&page=1&page_size=5', headers=headers)
     assert listing.status_code == 200
     assert listing.json()['total'] == 1
+
+    typed_listing = gateway.get('/api/member/appointments?service_type=Skilled%20Nursing&page=1&page_size=5', headers=headers)
+    assert typed_listing.status_code == 200
+    assert typed_listing.json()['total'] == 1
 
     visit_listing = gateway.get(f'/api/member/appointments/{appointment_id}/visits', headers=headers)
     assert visit_listing.status_code == 200

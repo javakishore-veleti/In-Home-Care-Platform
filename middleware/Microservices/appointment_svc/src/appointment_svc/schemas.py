@@ -12,6 +12,8 @@ class AppointmentCreate(BaseModel):
     service_area: str | None = None
     requested_date: date
     requested_time_slot: str
+    preferred_hour: str | None = None
+    preferred_minute: str | None = None
     scheduled_start: datetime | None = None
     scheduled_end: datetime | None = None
     reason: str | None = None
@@ -23,6 +25,8 @@ class AppointmentUpdate(BaseModel):
     service_area: str | None = None
     requested_date: date | None = None
     requested_time_slot: str | None = None
+    preferred_hour: str | None = None
+    preferred_minute: str | None = None
     scheduled_start: datetime | None = None
     scheduled_end: datetime | None = None
     reason: str | None = None
@@ -38,6 +42,8 @@ class AppointmentResponse(BaseModel):
     service_area: str | None = None
     requested_date: date
     requested_time_slot: str
+    preferred_hour: str | None = None
+    preferred_minute: str | None = None
     scheduled_start: datetime | None = None
     scheduled_end: datetime | None = None
     reason: str | None = None

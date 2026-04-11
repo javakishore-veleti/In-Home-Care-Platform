@@ -89,10 +89,13 @@ export function AppointmentDetailPage() {
             <div className="subcard">
               <strong>Requested schedule</strong>
               <p>{appointment.requested_date} · {appointment.requested_time_slot}</p>
+              {appointment.preferred_hour && appointment.preferred_minute ? (
+                <p className="muted">Preferred arrival: {appointment.preferred_hour}:{appointment.preferred_minute}</p>
+              ) : null}
             </div>
             <div className="subcard">
-              <strong>Service area</strong>
-              <p>{appointment.service_area || 'General support'}</p>
+              <strong>Care focus</strong>
+              <p>{appointment.service_area || 'Not specified'}</p>
             </div>
             <div className="subcard">
               <strong>Reason</strong>

@@ -22,11 +22,12 @@ def create_appointment(payload: AppointmentCreate, store: AppointmentStore = Dep
 def list_appointments(
     member_id: int,
     query: str | None = None,
+    service_type: str | None = None,
     page: int = 1,
     page_size: int = 10,
     store: AppointmentStore = Depends(get_store),
 ) -> AppointmentListResponse:
-    data = store.list_appointments(member_id=member_id, query=query, page=page, page_size=page_size)
+    data = store.list_appointments(member_id=member_id, query=query, service_type=service_type, page=page, page_size=page_size)
     data['items'] = [AppointmentResponse(**row) for row in data['items']]
     return AppointmentListResponse(**data)
 

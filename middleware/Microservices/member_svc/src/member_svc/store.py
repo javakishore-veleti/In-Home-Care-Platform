@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import math
 from typing import Any
 
 from fastapi import HTTPException, status
@@ -149,6 +150,68 @@ class MemberStore(BaseStore):
             predicate=lambda row: row['member_id'] == member_id,
             sort_key=lambda row: (not row.get('is_default', False), row['id']),
         )
+
+    def search_addresses(
+        self,
+        *,
+        member_id: int,
+        query: str | None = None,
+        page: int = 1,
+        page_size: int = 10,
+    ) -> dict[str, Any]:
+        self.get_member(member_id)
+        safe_page = max(1, page)
+        safe_page_size = max(1, min(page_size, 50))
+        search = (query or '').strip().lower()
+        if self.using_db:
+            params: list[Any] = [member_id]
+            where = ['member_id = %s']
+            if search:
+                where.append(
+                    "(CAST(id AS TEXT) ILIKE %s OR label ILIKE %s OR line1 ILIKE %s OR "
+                    "COALESCE(line2, '') ILIKE %s OR city ILIKE %s OR state ILIKE %s OR "
+                    "postal_code ILIKE %s OR COALESCE(instructions, '') ILIKE %s)"
+                )
+                match = f'%{search}%'
+                params.extend([match, match, match, match, match, match, match, match])
+            where_sql = ' AND '.join(where)
+            total_row = self.fetch_one(
+                f'SELECT COUNT(*) AS count FROM member_schema.member_addresses WHERE {where_sql}',
+                tuple(params),
+            )
+            total = int(total_row['count']) if total_row else 0
+            total_pages = max(1, math.ceil(total / safe_page_size))
+            current_page = min(safe_page, total_pages)
+            items = self.fetch_all(
+                f'''
+                SELECT id, member_id, label, line1, line2, city, state, postal_code,
+                       instructions, is_default, created_at, updated_at
+                FROM member_schema.member_addresses
+                WHERE {where_sql}
+                ORDER BY is_default DESC, id DESC
+                LIMIT %s OFFSET %s
+                ''',
+                tuple([*params, safe_page_size, (current_page - 1) * safe_page_size]),
+            )
+        else:
+            items = self.memory.list(
+                self._memory_key('addresses'),
+                predicate=lambda row: row['member_id'] == member_id and self._address_matches(row, search),
+                sort_key=lambda row: (row.get('is_default', False), row['id']),
+                reverse=True,
+            )
+            total = len(items)
+            total_pages = max(1, math.ceil(total / safe_page_size))
+            current_page = min(safe_page, total_pages)
+            start = (current_page - 1) * safe_page_size
+            items = items[start:start + safe_page_size]
+        return {
+            'items': items,
+            'page': current_page,
+            'page_size': safe_page_size,
+            'total': total,
+            'total_pages': total_pages,
+        }
 
     def create_address(self, member_id: int, payload: AddressCreate) -> dict[str, Any]:
         self.get_member(member_id)
@@ -300,3 +363,18 @@ class MemberStore(BaseStore):
         if not row:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Address not found.')
         return row
+
+    def _address_matches(self, row: dict[str, Any], search: str) -> bool:
+        if not search:
+            return True
+        values = [
+            row.get('id'),
+            row.get('label'),
+            row.get('line1'),
+            row.get('line2'),
+            row.get('city'),
+            row.get('state'),
+            row.get('postal_code'),
+            row.get('instructions'),
+        ]
+        return any(search in str(value).lower() for value in values if value is not None)

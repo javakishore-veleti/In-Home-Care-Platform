@@ -50,7 +50,7 @@ function PublicLayout({ children }: { children: React.ReactNode }) {
           <nav className="public-nav">
             <NavLink to="/" end className={({ isActive }) => `public-nav-link ${isActive ? 'active' : ''}`}>Home</NavLink>
             <NavLink to="/signin" className={({ isActive }) => `public-nav-link ${isActive ? 'active' : ''}`}>Sign in</NavLink>
-            <NavLink to="/signup" className={({ isActive }) => `primary-button public-nav-cta ${isActive ? 'active' : ''}`}>Create account</NavLink>
+            <NavLink to="/signup" className={({ isActive }) => `public-nav-cta ${isActive ? 'active primary-button' : ''}`}>Create account</NavLink>
           </nav>
         </div>
       </header>

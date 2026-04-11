@@ -27,45 +27,9 @@ export function SignUpPage() {
   }
 
   return (
-    <div className="auth-page">
-      <div className="auth-layout">
-        <div className="card auth-aside">
-          <p className="eyebrow">Get started</p>
-          <h2>Set up your member account for day-to-day care coordination.</h2>
-          <p className="muted">
-            Create a secure member profile, save service locations, and start requesting care with cleaner follow-up.
-          </p>
-          <AuthCareIllustration title="Create your account, save addresses, and get started right away." />
-          <div className="support-stat-grid">
-            <div className="support-stat">
-              <strong>Multiple addresses</strong>
-              <span>Keep home and family locations ready</span>
-            </div>
-            <div className="support-stat">
-              <strong>Faster booking</strong>
-              <span>Reuse saved details when requesting care</span>
-            </div>
-            <div className="support-stat">
-              <strong>Better follow-up</strong>
-              <span>Track what happened after each visit</span>
-            </div>
-          </div>
-          <ul className="feature-list">
-            <li className="feature-item">
-              <strong>Profile foundation</strong>
-              <span>Capture the member details the care team needs most often.</span>
-            </li>
-            <li className="feature-item">
-              <strong>Address-driven booking</strong>
-              <span>Use saved locations when scheduling in-home services.</span>
-            </li>
-            <li className="feature-item">
-              <strong>One connected experience</strong>
-              <span>Appointments, visits, and support stay connected after sign-in.</span>
-            </li>
-          </ul>
-        </div>
-        <form className="card auth-card" onSubmit={handleSubmit}>
+    <div className="auth-page compact-auth-page">
+      <div className="auth-layout compact-auth-layout">
+        <form className="card auth-card compact-auth-card" onSubmit={handleSubmit}>
           <p className="eyebrow">Create account</p>
           <h1>Create your member account</h1>
           <p className="muted">Start with your core details. You can add addresses and profile settings right after sign-up.</p>
@@ -97,6 +61,24 @@ export function SignUpPage() {
           </button>
           <p className="muted auth-footer-link">Already registered? <Link to="/signin">Sign in</Link>.</p>
         </form>
+        <div className="card auth-aside compact-auth-aside">
+          <p className="eyebrow">Get started</p>
+          <h2>Set up your account in a few clear steps.</h2>
+          <p className="muted">
+            Create your account, save addresses, and start managing care without busy or confusing screens.
+          </p>
+          <AuthCareIllustration title="Create your account, save addresses, and get started right away." />
+          <div className="support-stat-grid">
+            <div className="support-stat">
+              <strong>Multiple addresses</strong>
+              <span>Keep home and family locations ready</span>
+            </div>
+            <div className="support-stat">
+              <strong>Book more easily</strong>
+              <span>Reuse saved details when requesting care</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   )

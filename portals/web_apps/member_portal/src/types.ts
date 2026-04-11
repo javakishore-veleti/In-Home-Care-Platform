@@ -36,6 +36,14 @@ export interface Address {
   updated_at?: string | null
 }
 
+export interface AddressListResponse {
+  items: Address[]
+  page: number
+  page_size: number
+  total: number
+  total_pages: number
+}
+
 export interface Appointment {
   id: number
   member_id: number
@@ -44,6 +52,8 @@ export interface Appointment {
   service_area?: string | null
   requested_date: string
   requested_time_slot: string
+  preferred_hour?: string | null
+  preferred_minute?: string | null
   scheduled_start?: string | null
   scheduled_end?: string | null
   reason?: string | null

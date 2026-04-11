@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Response, status
 
-from .schemas import AddressCreate, AddressResponse, AddressUpdate, MemberCreate, MemberProfile, MemberUpdate
+from .schemas import AddressCreate, AddressListResponse, AddressResponse, AddressUpdate, MemberCreate, MemberProfile, MemberUpdate
 from .store import MemberStore
 
 router = APIRouter(tags=['members'])
@@ -31,6 +31,19 @@ def update_member(member_id: int, payload: MemberUpdate, store: MemberStore = De
 @router.get('/members/{member_id}/addresses', response_model=list[AddressResponse])
 def list_addresses(member_id: int, store: MemberStore = Depends(get_store)) -> list[AddressResponse]:
     return [AddressResponse(**row) for row in store.list_addresses(member_id)]
+
+
+@router.get('/members/{member_id}/address-directory', response_model=AddressListResponse)
+def search_addresses(
+    member_id: int,
+    query: str | None = None,
+    page: int = 1,
+    page_size: int = 10,
+    store: MemberStore = Depends(get_store),
+) -> AddressListResponse:
+    data = store.search_addresses(member_id=member_id, query=query, page=page, page_size=page_size)
+    data['items'] = [AddressResponse(**row) for row in data['items']]
+    return AddressListResponse(**data)
 
 
 @router.post('/members/{member_id}/addresses', response_model=AddressResponse, status_code=status.HTTP_201_CREATED)

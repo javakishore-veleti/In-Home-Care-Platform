@@ -25,7 +25,7 @@ function App() {
         <input
           value={search}
           onChange={e => setSearch(e.target.value)}
-          className="bg-[#2C3E50] text-white px-4 py-2 rounded-lg w-80 placeholder-[#7F8C8D] focus:outline-none focus:ring-2 focus:ring-[#0D7377]"
+          className="w-72 rounded-full border border-white/10 bg-white/12 px-3.5 py-2 text-sm text-white placeholder-[#A7B2BC] focus:outline-none focus:ring-2 focus:ring-[#0D7377]"
           placeholder="Search member by ID, phone, name..."
         />
       </header>
