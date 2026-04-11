@@ -109,6 +109,9 @@
         <mxCell id="doc_flow" value="document_author_flow&#xa;Draft summaries&#xa;structured outputs" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe4e6;strokeColor=#fb7185;fontColor=#0f172a;arcSize=10;" vertex="1" parent="1">
           <mxGeometry x="780" y="670" width="170" height="75" as="geometry" />
         </mxCell>
+        <mxCell id="slack_svc" value="slack_svc&#xa;Kafka consumer + Slack I/O&#xa;interactivity + events webhooks" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ede9fe;strokeColor=#a78bfa;fontColor=#0f172a;arcSize=10;" vertex="1" parent="1">
+          <mxGeometry x="380" y="355" width="180" height="85" as="geometry" />
+        </mxCell>
         <mxCell id="mongo" value="MongoDB&#xa;System of record&#xa;members · visits · docs" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fef3c7;strokeColor=#f59e0b;fontColor=#0f172a;arcSize=10;" vertex="1" parent="1">
           <mxGeometry x="1025" y="150" width="220" height="80" as="geometry" />
         </mxCell>
@@ -320,6 +323,21 @@
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="e60" value="alignment" style="endArrow=block;html=1;rounded=0;strokeWidth=1.5;dashed=1;strokeColor=#94a3b8;" edge="1" parent="1" source="docsops" target="governance">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_slack_consume" value="consume appointment.events" style="endArrow=block;html=1;rounded=0;strokeWidth=2;strokeColor=#f59e0b;" edge="1" parent="1" source="kafka" target="slack_svc">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_slack_post" value="chat.postMessage" style="endArrow=block;html=1;rounded=0;strokeWidth=2;strokeColor=#7c3aed;" edge="1" parent="1" source="slack_svc" target="slack_bot">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_slack_iact" value="interactivity webhook" style="endArrow=block;html=1;rounded=0;strokeWidth=1.5;dashed=1;strokeColor=#7c3aed;" edge="1" parent="1" source="slack_bot" target="slack_svc">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_slack_claim" value="POST /appointments/{id}/claim" style="endArrow=block;html=1;rounded=0;strokeWidth=2;strokeColor=#64748b;" edge="1" parent="1" source="slack_svc" target="appointment_svc">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_slack_obs" value="" style="endArrow=block;html=1;rounded=0;strokeWidth=1.5;dashed=1;strokeColor=#94a3b8;" edge="1" parent="1" source="slack_svc" target="observability">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
       </root>

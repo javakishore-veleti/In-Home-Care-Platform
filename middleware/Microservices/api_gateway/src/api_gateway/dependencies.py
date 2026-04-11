@@ -5,18 +5,18 @@ from typing import Annotated
 
 from fastapi import Depends, Header, HTTPException, status
 
-from appointment_svc.store import AppointmentStore
 from auth_svc.store import AuthStore
 from member_svc.schemas import MemberCreate
 from member_svc.store import MemberStore
 from visit_management_svc.store import VisitStore
 
+from .appointment_client import AppointmentClient
 from .chat_store import ChatStore
 
 
 auth_store = AuthStore()
 member_store = MemberStore()
-appointment_store = AppointmentStore()
+appointment_client = AppointmentClient()
 visit_store = VisitStore()
 chat_store = ChatStore()
 
@@ -65,8 +65,8 @@ def get_member_store() -> MemberStore:
     return member_store
 
 
-def get_appointment_store() -> AppointmentStore:
-    return appointment_store
+def get_appointment_client() -> AppointmentClient:
+    return appointment_client
 
 
 def get_visit_store() -> VisitStore:

@@ -19,6 +19,11 @@
       "name": "in-home-help-customers",
       "purpose": "AI-assisted channel for member/customer inquiries — appointment status, visit history, care plan questions. The LangGraph bot replies with grounded answers from the member record.",
       "topic": "Customer help channel — bot-assisted"
+    },
+    {
+      "name": "in-home-help-member-appointment-requests",
+      "purpose": "New member appointment requests posted by slack_svc. Field staff click Claim to take ownership; the claim is recorded against the appointment in Postgres.",
+      "topic": "Member appointment requests — claim to take ownership"
     }
   ]
 }

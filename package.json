@@ -22,7 +22,7 @@
     "setup:local:docker:down": "bash DevOps/Local/docker-all-down.sh",
     "setup:local:docker:status": "bash DevOps/Local/docker-all-status.sh",
 
-    "local:middleware:start-all": "bash -c 'VENV=$HOME/runtime_data/python_venvs/In-Home-Care-Platform; REPO=$(pwd); PYTHONPATH=\"$REPO/middleware\"; for svc in api_gateway auth_svc member_svc appointment_svc visit_management_svc visit_ingest_svc document_intelligence_svc mcp_gateway collection_ingest_svc; do PYTHONPATH=\"$PYTHONPATH:$REPO/middleware/Microservices/$svc/src\"; done; export PYTHONPATH; PIDS=\"\"; PORT=8001; for svc in api_gateway auth_svc member_svc appointment_svc visit_management_svc visit_ingest_svc document_intelligence_svc mcp_gateway; do echo \"Starting $svc on :$PORT\"; $VENV/bin/uvicorn ${svc}.main:app --host 127.0.0.1 --port $PORT --app-dir middleware/Microservices/$svc/src > /tmp/ihcp_${svc}.log 2>&1 & PIDS=\"$PIDS $!\"; PORT=$((PORT+1)); done; echo $PIDS > /tmp/ihcp_middleware.pids; echo \"All middleware started (ports 8001-8008). PIDs in /tmp/ihcp_middleware.pids\"'",
+    "local:middleware:start-all": "bash -c 'VENV=$HOME/runtime_data/python_venvs/In-Home-Care-Platform; REPO=$(pwd); PYTHONPATH=\"$REPO/middleware\"; for svc in api_gateway auth_svc member_svc appointment_svc visit_management_svc visit_ingest_svc document_intelligence_svc mcp_gateway slack_svc collection_ingest_svc; do PYTHONPATH=\"$PYTHONPATH:$REPO/middleware/Microservices/$svc/src\"; done; export PYTHONPATH; PIDS=\"\"; PORT=8001; for svc in api_gateway auth_svc member_svc appointment_svc visit_management_svc visit_ingest_svc document_intelligence_svc mcp_gateway slack_svc; do echo \"Starting $svc on :$PORT\"; $VENV/bin/uvicorn ${svc}.main:app --host 127.0.0.1 --port $PORT --app-dir middleware/Microservices/$svc/src > /tmp/ihcp_${svc}.log 2>&1 & PIDS=\"$PIDS $!\"; PORT=$((PORT+1)); done; echo $PIDS > /tmp/ihcp_middleware.pids; echo \"All middleware started (ports 8001-8009). PIDs in /tmp/ihcp_middleware.pids\"'",
     "local:middleware:stop-all": "bash -c 'if [ -f /tmp/ihcp_middleware.pids ]; then kill $(cat /tmp/ihcp_middleware.pids) 2>/dev/null; rm -f /tmp/ihcp_middleware.pids; echo \"All middleware stopped\"; else echo \"No PID file found\"; fi'",
     "local:middleware:status-all": "bash -c 'if [ -f /tmp/ihcp_middleware.pids ]; then for pid in $(cat /tmp/ihcp_middleware.pids); do if kill -0 $pid 2>/dev/null; then echo \"PID $pid: running\"; else echo \"PID $pid: not running\"; fi; done; else echo \"No PID file found — middleware not started\"; fi'",
 
@@ -44,6 +44,15 @@
     "local:start-all": "npm run setup:local:venv:create && npm run setup:local:venv:install && npm run setup:local:portals:install && npm run setup:local:docker:up && npm run db:migrate:all && npm run local:middleware:start-all && npm run local:portals:start-all",
     "local:stop-all": "npm run local:portals:stop-all && npm run local:middleware:stop-all && npm run setup:local:docker:down",
     "local:status-all": "npm run setup:local:docker:status && npm run local:middleware:status-all && npm run local:portals:status-all",
+    "local:status": "bash -c 'echo \"=== Docker ===\"; bash DevOps/Local/docker-all-status.sh 2>/dev/null | tail -n +1; echo; echo \"=== Middleware (port healthz probe) ===\"; for entry in api_gateway:8001 auth_svc:8002 member_svc:8003 appointment_svc:8004 visit_management_svc:8005 visit_ingest_svc:8006 document_intelligence_svc:8007 mcp_gateway:8008 slack_svc:8009; do svc=\"${entry%:*}\"; port=\"${entry#*:}\"; if curl -fs --max-time 1 http://127.0.0.1:$port/healthz >/dev/null 2>&1; then printf \"  [running] %-26s :%s\\n\" \"$svc\" \"$port\"; else printf \"  [stopped] %-26s :%s\\n\" \"$svc\" \"$port\"; fi; done; echo; echo \"=== Portals (port probe) ===\"; for entry in member_portal:3001 care_admin_portal:3002 customer_support_app:3003; do svc=\"${entry%:*}\"; port=\"${entry#*:}\"; if curl -fs --max-time 1 http://127.0.0.1:$port >/dev/null 2>&1; then printf \"  [running] %-26s :%s\\n\" \"$svc\" \"$port\"; else printf \"  [stopped] %-26s :%s\\n\" \"$svc\" \"$port\"; fi; done'",
+
+    "local:member:start": "bash DevOps/Local/docker-member-up.sh && bash DevOps/Local/db-migrate-member.sh && bash DevOps/Local/member-middleware-start.sh && npm run local:portal:member:dev",
+    "local:member:stop": "bash DevOps/Local/member-middleware-stop.sh && bash DevOps/Local/docker-member-down.sh",
+    "local:member:status": "bash DevOps/Local/docker-member-status.sh && echo '' && bash DevOps/Local/member-middleware-status.sh",
+    "local:member:middleware:start": "bash DevOps/Local/member-middleware-start.sh",
+    "local:member:middleware:stop": "bash DevOps/Local/member-middleware-stop.sh",
+    "local:member:middleware:status": "bash DevOps/Local/member-middleware-status.sh",
+    "db:migrate:member": "bash DevOps/Local/db-migrate-member.sh",
 
     "db:migrate:all": "bash DevOps/Local/db-migrate-all.sh",
     "db:status": "bash DevOps/Local/db-status.sh",

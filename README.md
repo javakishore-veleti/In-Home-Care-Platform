@@ -490,7 +490,23 @@ Token Scopes**.
 | `channels:read` | List channels |
 | `groups:write` | Create and archive private channels |
 | `groups:read` | List private channels |
-| `chat:write` | Post threaded replies (the LangGraph bot) |
+| `chat:write` | Post messages (LangGraph bot, slack_svc appointment notifications) |
+| `commands` | Required if you also enable slash commands |
+
+For the appointment-claim flow used by `slack_svc`, also enable
+**Interactivity & Shortcuts** and **Event Subscriptions** in the Slack app
+settings, then export the signing secret alongside the bot token:
+
+```bash
+export SLACK_BOT_TOKEN=xoxb-your-token-here
+export SLACK_SIGNING_SECRET=your-slack-signing-secret
+export KAFKA_BOOTSTRAP_SERVERS=localhost:9092   # default
+```
+
+The Slack app's **Request URL** for both Interactivity and Events should
+point at `slack_svc` (port `8009`) — locally that means tunnelling with
+ngrok and pasting `https://<tunnel>/slack/interactivity` and
+`https://<tunnel>/slack/events`.
 
 > With Enterprise scopes, `npm run setup:slack:channels` auto-creates
 > all 4 channels via the Slack API.
@@ -527,12 +543,13 @@ npm run setup:slack:channels
 Output:
 
 ```
-Processing 4 channel(s):
+Processing 5 channel(s):
   CREATED #in-home-help-field-officers (C07XXXXXXXX)
   CREATED #in-home-help-customer-support (C07XXXXXXXX)
   CREATED #in-home-help-product-owners (C07XXXXXXXX)
   CREATED #in-home-help-customers (C07XXXXXXXX)
-Done. 4/4 channels ready.
+  CREATED #in-home-help-member-appointment-requests (C07XXXXXXXX)
+Done. 5/5 channels ready.
 ```
 
 #### Free / Pro plan (manual create — 30 seconds)
@@ -540,11 +557,12 @@ Done. 4/4 channels ready.
 Create each channel manually in Slack:
 
 1. Click **"+"** next to "Channels" in the sidebar
-2. Create these 4 channels:
+2. Create these 5 channels:
    - `in-home-help-field-officers`
    - `in-home-help-customer-support`
    - `in-home-help-product-owners`
    - `in-home-help-customers`
+   - `in-home-help-member-appointment-requests`
 3. Invite the bot to each channel — type in each channel:
    ```
    /invite @In-Home-Care Bot

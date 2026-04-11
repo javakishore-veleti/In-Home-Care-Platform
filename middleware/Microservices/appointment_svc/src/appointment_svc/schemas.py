@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import date, datetime
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -53,6 +54,11 @@ class AppointmentResponse(BaseModel):
     created_at: datetime | None = None
     updated_at: datetime | None = None
     cancelled_at: datetime | None = None
+    slack_channel_id: str | None = None
+    slack_message_ts: str | None = None
+    claimed_by_slack_user_id: str | None = None
+    claimed_by_slack_user_name: str | None = None
+    claimed_at: datetime | None = None
 
 
 class AppointmentListResponse(BaseModel):
@@ -61,3 +67,23 @@ class AppointmentListResponse(BaseModel):
     page_size: int = Field(ge=1)
     total: int = Field(ge=0)
     total_pages: int = Field(ge=1)
+
+
+class AppointmentSlackMessageUpdate(BaseModel):
+    slack_channel_id: str
+    slack_message_ts: str
+
+
+class AppointmentClaimRequest(BaseModel):
+    appointment_id: int
+    slack_user_id: str
+    slack_user_name: str | None = None
+    slack_team_id: str | None = None
+    slack_channel_id: str | None = None
+    slack_message_ts: str | None = None
+
+
+class AppointmentClaimResponse(BaseModel):
+    appointment: AppointmentResponse
+    claim: dict[str, Any]
+    already_claimed: bool

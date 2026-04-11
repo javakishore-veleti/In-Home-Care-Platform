@@ -9,6 +9,24 @@ from shared.storage import BaseStore, now_utc
 
 from .schemas import AppointmentCreate, AppointmentUpdate
 
+# Single source of truth for the appointment SELECT shape. Every read path
+# goes through here so claim metadata stays attached to the appointment row
+# without each call site having to remember the LEFT JOIN.
+_APPOINTMENT_SELECT_COLUMNS = '''
+    a.id, a.member_id, a.address_id, a.service_type, a.service_area, a.requested_date,
+    a.requested_time_slot, a.preferred_hour, a.preferred_minute, a.scheduled_start, a.scheduled_end, a.reason, a.status,
+    a.assigned_staff_id, a.notes, a.created_at, a.updated_at, a.cancelled_at,
+    a.slack_channel_id, a.slack_message_ts,
+    c.slack_user_id AS claimed_by_slack_user_id,
+    c.slack_user_name AS claimed_by_slack_user_name,
+    c.claimed_at AS claimed_at
+'''
+
+_APPOINTMENT_SELECT_FROM = '''
+    FROM appointment_schema.appointments a
+    LEFT JOIN appointment_schema.appointment_claims c ON c.appointment_id = a.id
+'''
+
 
 class AppointmentStore(BaseStore):
     def __init__(self) -> None:
@@ -35,7 +53,7 @@ class AppointmentStore(BaseStore):
             'cancelled_at': None,
         }
         if self.using_db:
-            return self.fetch_one(
+            inserted = self.fetch_one(
                 '''
                 INSERT INTO appointment_schema.appointments (
                     member_id, address_id, service_type, service_area, requested_date,
@@ -43,9 +61,7 @@ class AppointmentStore(BaseStore):
                     assigned_staff_id, notes, created_at, updated_at, cancelled_at
                 )
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                RETURNING id, member_id, address_id, service_type, service_area, requested_date,
-                          requested_time_slot, preferred_hour, preferred_minute, scheduled_start, scheduled_end, reason, status,
-                          assigned_staff_id, notes, created_at, updated_at, cancelled_at
+                RETURNING id
                 ''',
                 (
                     record['member_id'],
@@ -67,7 +83,9 @@ class AppointmentStore(BaseStore):
                     record['cancelled_at'],
                 ),
             )
-        return self.memory.insert(self._memory_key('appointments'), record)
+            assert inserted is not None
+            return self.get_appointment(int(inserted['id']))
+        return self._with_claim_metadata(self.memory.insert(self._memory_key('appointments'), record))
 
     def list_appointments(
         self,
@@ -84,28 +102,26 @@ class AppointmentStore(BaseStore):
         service_type_filter = (service_type or '').strip().lower()
         if self.using_db:
             params: list[Any] = [member_id]
-            where = ['member_id = %s']
+            where = ['a.member_id = %s']
             if service_type_filter:
-                where.append('LOWER(service_type) = %s')
+                where.append('LOWER(a.service_type) = %s')
                 params.append(service_type_filter)
             if search:
-                where.append("(CAST(id AS TEXT) ILIKE %s OR service_type ILIKE %s OR COALESCE(service_area, '') ILIKE %s OR status ILIKE %s)")
+                where.append("(CAST(a.id AS TEXT) ILIKE %s OR a.service_type ILIKE %s OR COALESCE(a.service_area, '') ILIKE %s OR a.status ILIKE %s)")
                 match = f'%{search}%'
                 params.extend([match, match, match, match])
             where_sql = ' AND '.join(where)
             total_row = self.fetch_one(
-                f'SELECT COUNT(*) AS count FROM appointment_schema.appointments WHERE {where_sql}',
+                f'SELECT COUNT(*) AS count FROM appointment_schema.appointments a WHERE {where_sql}',
                 tuple(params),
             )
             params.extend([safe_page_size, (safe_page - 1) * safe_page_size])
             items = self.fetch_all(
                 f'''
-                SELECT id, member_id, address_id, service_type, service_area, requested_date,
-                       requested_time_slot, preferred_hour, preferred_minute, scheduled_start, scheduled_end, reason, status,
-                       assigned_staff_id, notes, created_at, updated_at, cancelled_at
-                FROM appointment_schema.appointments
+                SELECT {_APPOINTMENT_SELECT_COLUMNS}
+                {_APPOINTMENT_SELECT_FROM}
                 WHERE {where_sql}
-                ORDER BY requested_date DESC, id DESC
+                ORDER BY a.requested_date DESC, a.id DESC
                 LIMIT %s OFFSET %s
                 ''',
                 tuple(params),
@@ -120,7 +136,7 @@ class AppointmentStore(BaseStore):
             )
             total = len(items)
             start = (safe_page - 1) * safe_page_size
-            items = items[start:start + safe_page_size]
+            items = [self._with_claim_metadata(row) for row in items[start:start + safe_page_size]]
         total_pages = max(1, math.ceil(total / safe_page_size))
         return {
             'items': items,
@@ -138,17 +154,17 @@ class AppointmentStore(BaseStore):
     def get_appointment(self, appointment_id: int) -> dict[str, Any]:
         if self.using_db:
             row = self.fetch_one(
-                '''
-                SELECT id, member_id, address_id, service_type, service_area, requested_date,
-                       requested_time_slot, preferred_hour, preferred_minute, scheduled_start, scheduled_end, reason, status,
-                       assigned_staff_id, notes, created_at, updated_at, cancelled_at
-                FROM appointment_schema.appointments
-                WHERE id = %s
+                f'''
+                SELECT {_APPOINTMENT_SELECT_COLUMNS}
+                {_APPOINTMENT_SELECT_FROM}
+                WHERE a.id = %s
                 ''',
                 (appointment_id,),
             )
         else:
             row = self.memory.get(self._memory_key('appointments'), appointment_id)
+            if row is not None:
+                row = self._with_claim_metadata(row)
         if not row:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Appointment not found.')
         return row
@@ -167,47 +183,175 @@ class AppointmentStore(BaseStore):
             assignments.append('updated_at = %s')
             values.append(now_utc())
             values.append(appointment_id)
-            row = self.fetch_one(
+            self.execute(
                 f'''
                 UPDATE appointment_schema.appointments
                 SET {', '.join(assignments)}
                 WHERE id = %s
-                RETURNING id, member_id, address_id, service_type, service_area, requested_date,
-                          requested_time_slot, preferred_hour, preferred_minute, scheduled_start, scheduled_end, reason, status,
-                          assigned_staff_id, notes, created_at, updated_at, cancelled_at
                 ''',
                 tuple(values),
             )
-            assert row is not None
-            return row
+            return self.get_appointment(appointment_id)
         updates['updated_at'] = now_utc()
         updated = self.memory.update(self._memory_key('appointments'), appointment_id, updates)
         assert updated is not None
-        return updated
+        return self._with_claim_metadata(updated)
 
     def cancel_appointment(self, appointment_id: int) -> dict[str, Any]:
         self.get_appointment(appointment_id)
         if self.using_db:
-            row = self.fetch_one(
+            self.execute(
                 '''
                 UPDATE appointment_schema.appointments
                 SET status = 'cancelled', cancelled_at = %s, updated_at = %s
                 WHERE id = %s
-                RETURNING id, member_id, address_id, service_type, service_area, requested_date,
-                          requested_time_slot, preferred_hour, preferred_minute, scheduled_start, scheduled_end, reason, status,
-                          assigned_staff_id, notes, created_at, updated_at, cancelled_at
                 ''',
                 (now_utc(), now_utc(), appointment_id),
             )
-            assert row is not None
-            return row
+            return self.get_appointment(appointment_id)
         updated = self.memory.update(
             self._memory_key('appointments'),
             appointment_id,
             {'status': 'cancelled', 'cancelled_at': now_utc(), 'updated_at': now_utc()},
         )
         assert updated is not None
-        return updated
+        return self._with_claim_metadata(updated)
+
+    def attach_slack_message(self, appointment_id: int, channel_id: str, message_ts: str) -> dict[str, Any]:
+        """Persist the Slack message coordinates onto the appointment row."""
+        if self.using_db:
+            self.execute(
+                '''
+                UPDATE appointment_schema.appointments
+                SET slack_channel_id = %s, slack_message_ts = %s, updated_at = %s
+                WHERE id = %s
+                ''',
+                (channel_id, message_ts, now_utc(), appointment_id),
+            )
+            return self.get_appointment(appointment_id)
+        updated = self.memory.update(
+            self._memory_key('appointments'),
+            appointment_id,
+            {'slack_channel_id': channel_id, 'slack_message_ts': message_ts, 'updated_at': now_utc()},
+        )
+        assert updated is not None
+        return self._with_claim_metadata(updated)
+
+    def claim_appointment_via_slack(
+        self,
+        appointment_id: int,
+        *,
+        slack_user_id: str,
+        slack_user_name: str | None,
+        slack_team_id: str | None,
+        slack_channel_id: str | None,
+        slack_message_ts: str | None,
+    ) -> dict[str, Any]:
+        """Record a Slack-originated claim and bump the appointment to status='claimed'.
+
+        Idempotent: a second click returns the existing claim with
+        ``already_claimed=True`` and does *not* re-bump the status row, so the
+        ``updated_at`` timestamp reflects the moment of first claim.
+        """
+        # Make sure the appointment exists (raises 404 otherwise).
+        self.get_appointment(appointment_id)
+        if self.using_db:
+            existing = self.fetch_one(
+                'SELECT id, appointment_id, slack_user_id, slack_user_name, claimed_at '
+                'FROM appointment_schema.appointment_claims WHERE appointment_id = %s',
+                (appointment_id,),
+            )
+            if existing:
+                return {
+                    'appointment': self.get_appointment(appointment_id),
+                    'claim': existing,
+                    'already_claimed': True,
+                }
+            claim = self.fetch_one(
+                '''
+                INSERT INTO appointment_schema.appointment_claims (
+                    appointment_id, slack_user_id, slack_user_name, slack_team_id,
+                    slack_channel_id, slack_message_ts
+                )
+                VALUES (%s, %s, %s, %s, %s, %s)
+                RETURNING id, appointment_id, slack_user_id, slack_user_name, slack_team_id,
+                          slack_channel_id, slack_message_ts, claimed_at
+                ''',
+                (
+                    appointment_id,
+                    slack_user_id,
+                    slack_user_name,
+                    slack_team_id,
+                    slack_channel_id,
+                    slack_message_ts,
+                ),
+            )
+            self.execute(
+                '''
+                UPDATE appointment_schema.appointments
+                SET status = 'claimed', updated_at = %s
+                WHERE id = %s
+                ''',
+                (now_utc(), appointment_id),
+            )
+            return {
+                'appointment': self.get_appointment(appointment_id),
+                'claim': claim,
+                'already_claimed': False,
+            }
+
+        existing_mem = self.memory.list(
+            self._memory_key('appointment_claims'),
+            predicate=lambda row: row['appointment_id'] == appointment_id,
+        )
+        if existing_mem:
+            return {
+                'appointment': self.get_appointment(appointment_id),
+                'claim': existing_mem[0],
+                'already_claimed': True,
+            }
+        claim = self.memory.insert(
+            self._memory_key('appointment_claims'),
+            {
+                'appointment_id': appointment_id,
+                'slack_user_id': slack_user_id,
+                'slack_user_name': slack_user_name,
+                'slack_team_id': slack_team_id,
+                'slack_channel_id': slack_channel_id,
+                'slack_message_ts': slack_message_ts,
+                'claimed_at': now_utc(),
+            },
+        )
+        self.memory.update(
+            self._memory_key('appointments'),
+            appointment_id,
+            {'status': 'claimed', 'updated_at': now_utc()},
+        )
+        return {
+            'appointment': self.get_appointment(appointment_id),
+            'claim': claim,
+            'already_claimed': False,
+        }
+
+    def _with_claim_metadata(self, row: dict[str, Any]) -> dict[str, Any]:
+        """Memory-backend equivalent of the SQL LEFT JOIN to appointment_claims."""
+        if not row:
+            return row
+        merged = dict(row)
+        claims = self.memory.list(
+            self._memory_key('appointment_claims'),
+            predicate=lambda r: r['appointment_id'] == row.get('id'),
+        )
+        if claims:
+            claim = claims[0]
+            merged['claimed_by_slack_user_id'] = claim.get('slack_user_id')
+            merged['claimed_by_slack_user_name'] = claim.get('slack_user_name')
+            merged['claimed_at'] = claim.get('claimed_at')
+        else:
+            merged.setdefault('claimed_by_slack_user_id', None)
+            merged.setdefault('claimed_by_slack_user_name', None)
+            merged.setdefault('claimed_at', None)
+        return merged
 
     @staticmethod
     def _matches(row: dict[str, Any], search: str) -> bool:

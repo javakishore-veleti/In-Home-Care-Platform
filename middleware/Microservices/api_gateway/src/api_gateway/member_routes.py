@@ -18,7 +18,7 @@ from visit_management_svc.schemas import (
 
 from .dependencies import (
     CurrentSession,
-    get_appointment_store,
+    get_appointment_client,
     get_chat_store,
     get_member_store,
     get_visit_store,
@@ -109,7 +109,7 @@ def set_default_address(address_id: int, session: CurrentSession, member_store=D
 def create_appointment(
     payload: MemberAppointmentCreate,
     session: CurrentSession,
-    appointment_store=Depends(get_appointment_store),
+    appointment_client=Depends(get_appointment_client),
     member_store=Depends(get_member_store),
 ) -> AppointmentResponse:
     addresses = member_store.list_addresses(session.member['id'])
@@ -117,7 +117,7 @@ def create_appointment(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Appointment must use one of your saved addresses.')
     from appointment_svc.schemas import AppointmentCreate
 
-    appointment = appointment_store.create_appointment(
+    appointment = appointment_client.create_appointment(
         AppointmentCreate(member_id=session.member['id'], **payload.model_dump()),
     )
     return AppointmentResponse(**appointment)
@@ -130,9 +130,9 @@ def list_appointments(
     service_type: str | None = None,
     page: int = 1,
     page_size: int = 10,
-    appointment_store=Depends(get_appointment_store),
+    appointment_client=Depends(get_appointment_client),
 ) -> AppointmentListResponse:
-    data = appointment_store.list_appointments(
+    data = appointment_client.list_appointments(
         member_id=session.member['id'],
         query=query,
         service_type=service_type,
@@ -144,8 +144,8 @@ def list_appointments(
 
 
 @router.get('/appointments/{appointment_id}', response_model=AppointmentResponse)
-def get_appointment(appointment_id: int, session: CurrentSession, appointment_store=Depends(get_appointment_store)) -> AppointmentResponse:
-    appointment = appointment_store.get_appointment(appointment_id)
+def get_appointment(appointment_id: int, session: CurrentSession, appointment_client=Depends(get_appointment_client)) -> AppointmentResponse:
+    appointment = appointment_client.get_appointment(appointment_id)
     _ensure_appointment_owner(appointment, session.member['id'])
     return AppointmentResponse(**appointment)
 
@@ -155,32 +155,32 @@ def update_appointment(
     appointment_id: int,
     payload: AppointmentUpdate,
     session: CurrentSession,
-    appointment_store=Depends(get_appointment_store),
+    appointment_client=Depends(get_appointment_client),
 ) -> AppointmentResponse:
-    appointment = appointment_store.get_appointment(appointment_id)
+    appointment = appointment_client.get_appointment(appointment_id)
     _ensure_appointment_owner(appointment, session.member['id'])
-    return AppointmentResponse(**appointment_store.update_appointment(appointment_id, payload))
+    return AppointmentResponse(**appointment_client.update_appointment(appointment_id, payload))
 
 
 @router.post('/appointments/{appointment_id}/cancel', response_model=AppointmentResponse)
 def cancel_appointment(
     appointment_id: int,
     session: CurrentSession,
-    appointment_store=Depends(get_appointment_store),
+    appointment_client=Depends(get_appointment_client),
 ) -> AppointmentResponse:
-    appointment = appointment_store.get_appointment(appointment_id)
+    appointment = appointment_client.get_appointment(appointment_id)
     _ensure_appointment_owner(appointment, session.member['id'])
-    return AppointmentResponse(**appointment_store.cancel_appointment(appointment_id))
+    return AppointmentResponse(**appointment_client.cancel_appointment(appointment_id))
 
 
 @router.get('/appointments/{appointment_id}/visits', response_model=list[VisitResponse])
 def list_visits(
     appointment_id: int,
     session: CurrentSession,
-    appointment_store=Depends(get_appointment_store),
+    appointment_client=Depends(get_appointment_client),
     visit_store=Depends(get_visit_store),
 ) -> list[VisitResponse]:
-    appointment = appointment_store.get_appointment(appointment_id)
+    appointment = appointment_client.get_appointment(appointment_id)
     _ensure_appointment_owner(appointment, session.member['id'])
     return [VisitResponse(**row) for row in visit_store.list_visits_for_appointment(appointment_id)]
 
@@ -231,10 +231,10 @@ def send_chat_message(
     payload: ChatMessageCreate,
     session: CurrentSession,
     chat_store=Depends(get_chat_store),
-    appointment_store=Depends(get_appointment_store),
+    appointment_client=Depends(get_appointment_client),
 ) -> ChatThreadResponse:
     chat_store.add_message(session.member['id'], 'user', payload.message)
-    reply = _generate_chat_reply(payload.message, session.member, appointment_store)
+    reply = _generate_chat_reply(payload.message, session.member, appointment_client)
     chat_store.add_message(session.member['id'], 'assistant', reply)
     messages = [ChatMessageResponse(**row) for row in chat_store.list_messages(session.member['id'])]
     return ChatThreadResponse(messages=messages)
@@ -250,9 +250,9 @@ def _ensure_visit_owner(visit: dict[str, Any], member_id: int) -> None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Visit not found.')
 
 
-def _generate_chat_reply(message: str, member: dict[str, Any], appointment_store) -> str:
+def _generate_chat_reply(message: str, member: dict[str, Any], appointment_client) -> str:
     lowered = message.lower()
-    appointment_snapshot = appointment_store.list_appointments(member_id=member['id'], page=1, page_size=3)
+    appointment_snapshot = appointment_client.list_appointments(member_id=member['id'], page=1, page_size=3)
     if 'appointment' in lowered:
         count = appointment_snapshot['total']
         return f"You currently have {count} appointment request(s) on file. I can help you review an upcoming visit, confirm your saved address, or suggest questions for your care team."
