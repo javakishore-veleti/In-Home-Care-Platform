@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <!-- House body -->
+  <rect x="12" y="30" width="40" height="28" rx="3" fill="#0D7377"/>
+  <!-- Roof -->
+  <path d="M6 32 L32 8 L58 32" stroke="#0D7377" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <!-- Door -->
+  <rect x="26" y="42" width="12" height="16" rx="2" fill="#FFFFFF"/>
+  <!-- Heart (care symbol) -->
+  <path d="M32 24 C28 18, 20 20, 22 26 C24 32, 32 36, 32 36 C32 36, 40 32, 42 26 C44 20, 36 18, 32 24Z" fill="#E8612D"/>
+</svg>
