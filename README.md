@@ -182,6 +182,163 @@ MongoDB collections grouped by owning service:
 | CI | GitHub Actions |
 | Deploy | GCP Cloud Run + Kubernetes manifests |
 
+## Getting started — npm commands for everything
+
+Every operation is an `npm run` script. No raw `cd`, no manual
+`pip install`, no manual `npm install` inside portal folders.
+
+### First-time setup (run once after clone)
+
+```bash
+# 1. Create conda venv + install all Python deps + install all portal
+#    node_modules + bring up all docker stacks
+npm run setup:local:all
+```
+
+This runs four steps in order:
+
+| Step | What it does |
+|---|---|
+| `setup:local:venv:create` | `conda create -y -p ~/runtime_data/python_venvs/In-Home-Care-Platform python=3.13` |
+| `setup:local:venv:install` | `pip install -r requirements.txt` (all middleware + agentic flow deps) |
+| `setup:local:portals:install` | `npm install` inside member_portal, care_admin_portal, customer_support_app |
+| `setup:local:docker:up` | Docker Compose up for MongoDB, Kafka, Postgres, Redis, VectorDBs, Prometheus, Grafana, Kibana |
+
+To activate the conda venv in your shell (for running Python directly):
+
+```bash
+npm run setup:local:venv:activate
+# then copy-paste the printed command into your shell
+```
+
+### Daily workflow — start / stop / status
+
+```bash
+# Start everything (docker + 8 middleware services + web portals)
+npm run local:start-all
+
+# Or start layers individually:
+npm run setup:local:docker:up         # docker stacks only
+npm run local:middleware:start-all    # uvicorn all 8 services (ports 8001-8008)
+npm run local:portals:start-all       # vite dev for web portals in parallel
+
+# Check what's running
+npm run local:status-all
+
+# Stop everything
+npm run local:stop-all
+```
+
+### Portal commands (each does npm install before dev/build)
+
+**Member Portal** (React, http://localhost:3001):
+
+```bash
+npm run setup:local:portal:member     # npm install
+npm run local:portal:member:dev       # vite dev server on :3001
+npm run local:portal:member:build     # tsc + vite build
+```
+
+**Care Admin Portal** (React, http://localhost:3002):
+
+```bash
+npm run setup:local:portal:admin      # npm install
+npm run local:portal:admin:dev        # vite dev server on :3002
+npm run local:portal:admin:build      # tsc + vite build
+```
+
+**Customer Support Desktop App** (Electron + React, http://localhost:3003):
+
+```bash
+npm run setup:local:portal:desktop    # npm install
+npm run local:portal:desktop:dev      # vite dev server on :3003
+npm run local:portal:desktop:electron # launch Electron window (loads :3003)
+npm run local:portal:desktop:build    # tsc + vite build (for packaged Electron)
+```
+
+**Field Staff Mobile App** (React Native / Expo):
+
+```bash
+npm run setup:local:portal:mobile     # npm install
+npm run local:portal:mobile:start     # expo start (scan QR with Expo Go)
+npm run local:portal:mobile:ios       # expo start --ios
+npm run local:portal:mobile:android   # expo start --android
+npm run local:portal:mobile:web       # expo start --web
+```
+
+### Middleware commands
+
+```bash
+npm run local:middleware:start-all    # uvicorn all 8 services (ports 8001-8008)
+npm run local:middleware:stop-all     # kill all middleware PIDs
+npm run local:middleware:status-all   # check PID liveness
+```
+
+### Docker infrastructure commands
+
+```bash
+npm run setup:local:docker:up         # bring up all stacks
+npm run setup:local:docker:down       # tear down all stacks
+npm run setup:local:docker:status     # show running containers
+```
+
+### Test + lint
+
+```bash
+npm test                              # pytest -q across all middleware
+npm run test:middleware                # pytest middleware/ only
+npm run lint                          # ruff check .
+```
+
+### Teardown (nuclear option)
+
+```bash
+npm run teardown:local:all            # stop everything + delete the conda venv
+```
+
+### Full npm script reference
+
+| Script | Purpose |
+|---|---|
+| `setup:local:all` | First-time: venv + pip + portal npm install + docker up |
+| `setup:local:venv:create` | Create conda env at `~/runtime_data/python_venvs/In-Home-Care-Platform` |
+| `setup:local:venv:install` | `pip install -r requirements.txt` into the conda venv |
+| `setup:local:venv:activate` | Print the `conda activate` command |
+| `setup:local:venv:deactivate` | Print `conda deactivate` |
+| `setup:local:venv:destroy` | Delete the conda venv |
+| `setup:local:portals:install` | `npm install` in all 3 web/desktop portals |
+| `setup:local:portal:member` | `npm install` in member_portal |
+| `setup:local:portal:admin` | `npm install` in care_admin_portal |
+| `setup:local:portal:desktop` | `npm install` in customer_support_app |
+| `setup:local:portal:mobile` | `npm install` in field_staff_app |
+| `setup:local:docker:up` | Docker Compose up all stacks |
+| `setup:local:docker:down` | Docker Compose down all stacks |
+| `setup:local:docker:status` | Docker Compose ps all stacks |
+| `local:middleware:start-all` | Uvicorn all 8 services (8001-8008) |
+| `local:middleware:stop-all` | Kill middleware PIDs |
+| `local:middleware:status-all` | Check middleware PID liveness |
+| `local:portals:start-all` | Vite dev all web portals in parallel |
+| `local:portal:member:dev` | Member portal on :3001 |
+| `local:portal:member:build` | Build member portal |
+| `local:portal:admin:dev` | Admin portal on :3002 |
+| `local:portal:admin:build` | Build admin portal |
+| `local:portal:desktop:dev` | Desktop app Vite on :3003 |
+| `local:portal:desktop:electron` | Launch Electron window |
+| `local:portal:desktop:build` | Build desktop app |
+| `local:portal:mobile:start` | Expo start |
+| `local:portal:mobile:ios` | Expo iOS |
+| `local:portal:mobile:android` | Expo Android |
+| `local:portal:mobile:web` | Expo web |
+| `local:portals:stop-all` | Kill portal PIDs |
+| `local:portals:status-all` | Check portal PID liveness |
+| `local:start-all` | Docker + middleware + portals |
+| `local:stop-all` | Reverse of above |
+| `local:status-all` | Check all layers |
+| `test` | `pytest -q` via conda venv |
+| `test:middleware` | `pytest middleware/` only |
+| `lint` | `ruff check .` |
+| `teardown:local:all` | Stop all + destroy venv |
+
 ## Status
 
 Scaffolded. Directory structure, architecture diagram, and dev plan
