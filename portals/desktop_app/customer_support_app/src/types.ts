@@ -52,10 +52,23 @@ export interface VisitRow {
 
 export interface CaseRow {
   id: number
-  member_id?: number
-  subject?: string
-  priority?: string
-  status?: string
+  member_id: number
+  subject: string
+  description?: string | null
+  priority: string
+  status: string
+  created_by_user_id?: number | null
+  assigned_to_user_id?: number | null
+  created_at?: string | null
+  updated_at?: string | null
+  resolved_at?: string | null
+}
+
+export interface SupportCaseCreate {
+  member_id: number
+  subject: string
+  description?: string
+  priority: string
 }
 
 export interface PaginatedResponse<T> {

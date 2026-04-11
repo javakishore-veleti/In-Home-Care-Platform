@@ -8,6 +8,7 @@ from fastapi import Depends, Header, HTTPException, status
 from auth_svc.store import AuthStore
 from member_svc.schemas import MemberCreate
 from member_svc.store import MemberStore
+from member_svc.support_case_store import SupportCaseStore
 from visit_management_svc.store import VisitStore
 
 from .appointment_client import AppointmentClient
@@ -16,6 +17,7 @@ from .chat_store import ChatStore
 
 auth_store = AuthStore()
 member_store = MemberStore()
+support_case_store = SupportCaseStore()
 appointment_client = AppointmentClient()
 visit_store = VisitStore()
 chat_store = ChatStore()
@@ -92,6 +94,10 @@ def get_auth_store() -> AuthStore:
 
 def get_member_store() -> MemberStore:
     return member_store
+
+
+def get_support_case_store() -> SupportCaseStore:
+    return support_case_store
 
 
 def get_appointment_client() -> AppointmentClient:

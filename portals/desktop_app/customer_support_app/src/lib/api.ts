@@ -4,6 +4,7 @@ import type {
   CaseRow,
   MemberRow,
   PaginatedResponse,
+  SupportCaseCreate,
   User,
   VisitRow,
 } from '../types'
@@ -48,6 +49,12 @@ export const api = {
   },
   listCases(token: string, params: URLSearchParams) {
     return request<PaginatedResponse<CaseRow>>(`/api/support/cases?${params.toString()}`, {}, token)
+  },
+  createCase(token: string, payload: SupportCaseCreate) {
+    return request<CaseRow>('/api/support/cases', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }, token)
   },
   listMembers(token: string, params: URLSearchParams) {
     return request<PaginatedResponse<MemberRow>>(`/api/support/members?${params.toString()}`, {}, token)

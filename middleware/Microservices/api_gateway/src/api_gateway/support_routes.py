@@ -1,23 +1,27 @@
 """Read-only cross-member endpoints for the customer_support_app.
 
 Gated by ``require_roles({'support', 'admin'})`` so an admin can also use
-this surface during incident response. Cases are stubbed for now (no
-support_cases table yet) — the endpoint returns an empty list with the
-right shape so the desktop app's Cases screen renders the empty state
-instead of dummy rows.
+this surface during incident response. Cases are persisted in
+``member_schema.support_cases`` (lives in member_svc until/unless a
+dedicated support_svc is split out).
 """
 from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Body, Depends, HTTPException, status
+from pydantic import BaseModel, Field
 
 from .dependencies import (
+    SessionContext,
     get_appointment_client,
     get_member_store,
+    get_support_case_store,
     get_visit_store,
     require_roles,
 )
+
+ALLOWED_PRIORITIES = {'low', 'medium', 'high', 'urgent'}
 
 router = APIRouter(
     prefix='/api/support',
@@ -26,20 +30,56 @@ router = APIRouter(
 )
 
 
-@router.get('/cases')
-def list_cases(page: int = 1, page_size: int = 20) -> dict[str, Any]:
-    """Stub list — support_cases table not implemented yet.
+class SupportCaseCreate(BaseModel):
+    member_id: int
+    subject: str = Field(min_length=1, max_length=255)
+    description: str | None = None
+    priority: str = 'medium'
 
-    Returning the right pagination shape lets the front-end render an empty
-    state without special-casing. Replace once the cases domain exists.
+
+@router.get('/cases')
+def list_cases(
+    member_id: int | None = None,
+    status_filter: str | None = None,
+    page: int = 1,
+    page_size: int = 20,
+    support_case_store=Depends(get_support_case_store),
+) -> dict[str, Any]:
+    return support_case_store.list_cases(
+        member_id=member_id,
+        status_filter=status_filter,
+        page=page,
+        page_size=page_size,
+    )
+
+
+@router.post('/cases', status_code=status.HTTP_201_CREATED)
+def create_case(
+    payload: SupportCaseCreate = Body(...),
+    session: SessionContext = Depends(require_roles({'support', 'admin'})),
+    support_case_store=Depends(get_support_case_store),
+    member_store=Depends(get_member_store),
+) -> dict[str, Any]:
+    """Open a new support case.
+
+    The acting support user is recorded as ``created_by_user_id`` so we
+    have an audit trail without needing the front-end to send it.
     """
-    return {
-        'items': [],
-        'page': max(1, page),
-        'page_size': max(1, min(page_size, 100)),
-        'total': 0,
-        'total_pages': 1,
-    }
+    priority = (payload.priority or 'medium').lower()
+    if priority not in ALLOWED_PRIORITIES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'priority must be one of {sorted(ALLOWED_PRIORITIES)}',
+        )
+    # Surface a clean 404 if the member doesn't exist instead of a FK violation.
+    member_store.get_member(payload.member_id)
+    return support_case_store.create_case(
+        member_id=payload.member_id,
+        subject=payload.subject.strip(),
+        description=(payload.description or '').strip() or None,
+        priority=priority,
+        created_by_user_id=session.user.get('id'),
+    )
 
 
 @router.get('/members')
