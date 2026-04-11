@@ -12,15 +12,15 @@
     "expo": "~52.0.0",
     "expo-camera": "~16.0.0",
     "expo-status-bar": "~2.0.0",
-    "react": "^19.1.0",
-    "react-native": "~0.77.0",
+    "react": "18.3.1",
+    "react-native": "0.77.3",
     "@react-navigation/native": "^7.1.0",
     "@react-navigation/native-stack": "^7.3.0",
     "react-native-screens": "~4.4.0",
     "react-native-safe-area-context": "~5.3.0"
   },
   "devDependencies": {
-    "@types/react": "^19.1.0",
+    "@types/react": "~18.3.0",
     "typescript": "^5.7.0"
   }
 }
