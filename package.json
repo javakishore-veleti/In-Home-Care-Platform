@@ -41,7 +41,7 @@
     "local:portals:stop-all": "bash -c 'if [ -f /tmp/ihcp_portals.pids ]; then kill $(cat /tmp/ihcp_portals.pids) 2>/dev/null; rm -f /tmp/ihcp_portals.pids; echo \"All portals stopped\"; else echo \"No PID file found\"; fi'",
     "local:portals:status-all": "bash -c 'if [ -f /tmp/ihcp_portals.pids ]; then for pid in $(cat /tmp/ihcp_portals.pids); do if kill -0 $pid 2>/dev/null; then echo \"PID $pid: running\"; else echo \"PID $pid: not running\"; fi; done; else echo \"No PID file found — portals not started\"; fi'",
 
-    "local:start-all": "npm run setup:local:docker:up && npm run db:migrate:all && npm run local:middleware:start-all && npm run local:portals:start-all",
+    "local:start-all": "npm run setup:local:venv:create && npm run setup:local:venv:install && npm run setup:local:portals:install && npm run setup:local:docker:up && npm run db:migrate:all && npm run local:middleware:start-all && npm run local:portals:start-all",
     "local:stop-all": "npm run local:portals:stop-all && npm run local:middleware:stop-all && npm run setup:local:docker:down",
     "local:status-all": "npm run setup:local:docker:status && npm run local:middleware:status-all && npm run local:portals:status-all",
 
