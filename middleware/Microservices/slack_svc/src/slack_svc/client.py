@@ -15,6 +15,7 @@ import httpx
 log = logging.getLogger(__name__)
 
 APPOINTMENT_SVC_URL = os.getenv('APPOINTMENT_SVC_URL', 'http://127.0.0.1:8004')
+API_GATEWAY_URL = os.getenv('API_GATEWAY_URL', 'http://127.0.0.1:8001')
 HTTP_TIMEOUT = float(os.getenv('APPOINTMENT_SVC_TIMEOUT_SECONDS', '5'))
 
 
@@ -44,6 +45,27 @@ async def attach_slack_message(
         resp = await client.patch(url, json=payload)
     resp.raise_for_status()
     return resp.json()
+
+
+async def lookup_slack_integration(event_type: str) -> dict[str, Any] | None:
+    """Ask api_gateway for the channel currently mapped to ``event_type``.
+
+    Returns the integration row dict (with ``slack_channel_id`` /
+    ``slack_channel_name``) or ``None`` if no row exists or the gateway
+    is unreachable. Callers fall back to their own default channel
+    constant on ``None`` so a transient gateway hiccup never blocks a
+    Slack post.
+    """
+    url = f'{API_GATEWAY_URL}/api/internal/slack/integrations/lookup'
+    try:
+        async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
+            resp = await client.get(url, params={'event_type': event_type})
+        resp.raise_for_status()
+    except httpx.HTTPError as exc:
+        log.warning('slack_integration_lookup.failed event_type=%s error=%s', event_type, exc)
+        return None
+    body = resp.json()
+    return body.get('integration')
 
 
 async def claim_appointment(

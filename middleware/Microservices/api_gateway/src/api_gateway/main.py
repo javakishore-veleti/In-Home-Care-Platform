@@ -19,6 +19,7 @@ for path in [
 
 from .admin_routes import router as admin_router
 from .auth import router as auth_router
+from .internal_routes import router as internal_router
 from .member_routes import router as member_router
 from .support_routes import router as support_router
 
@@ -44,6 +45,7 @@ def create_app() -> FastAPI:
     application.include_router(member_router)
     application.include_router(admin_router)
     application.include_router(support_router)
+    application.include_router(internal_router)
 
     @application.get('/healthz')
     def healthz() -> dict[str, str]:

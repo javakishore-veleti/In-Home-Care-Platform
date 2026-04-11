@@ -4,6 +4,8 @@ import type {
   DashboardStats,
   MemberRow,
   PaginatedResponse,
+  SlackChannelsResponse,
+  SlackIntegration,
   StaffRow,
   User,
   VisitRow,
@@ -73,5 +75,34 @@ export const api = {
   },
   getMember(token: string, memberId: number) {
     return request<MemberRow>(`/api/admin/members/${memberId}`, {}, token)
+  },
+  // ----- Slack integrations -----
+  listSlackChannels(token: string) {
+    return request<SlackChannelsResponse>('/api/admin/slack/channels', {}, token)
+  },
+  inviteBotToChannel(token: string, channelId: string) {
+    return request<{ ok: boolean; error?: string }>(`/api/admin/slack/channels/${channelId}/invite`, {
+      method: 'POST',
+    }, token)
+  },
+  upsertSlackIntegration(
+    token: string,
+    payload: { slack_channel_id: string; slack_channel_name: string; event_type: string },
+  ) {
+    return request<SlackIntegration>('/api/admin/slack/integrations', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }, token)
+  },
+  toggleSlackIntegration(token: string, integrationId: number, enabled: boolean) {
+    return request<SlackIntegration>(`/api/admin/slack/integrations/${integrationId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ enabled }),
+    }, token)
+  },
+  deleteSlackIntegration(token: string, integrationId: number) {
+    return request<void>(`/api/admin/slack/integrations/${integrationId}`, {
+      method: 'DELETE',
+    }, token)
   },
 }

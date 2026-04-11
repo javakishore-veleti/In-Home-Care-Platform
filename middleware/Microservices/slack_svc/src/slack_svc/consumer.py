@@ -66,7 +66,12 @@ async def handle_appointment_event(event: dict[str, Any]) -> bool:
         return True
 
     text, blocks = appointment_request(appointment)
-    result = post_message(APPOINTMENT_REQUESTS_CHANNEL, text=text, blocks=blocks)
+    # Pick the destination channel from the admin-managed integrations
+    # table first; fall back to the env-var default when no row exists
+    # so a fresh DB still works without any UI configuration.
+    integration = await client.lookup_slack_integration(APPOINTMENT_BOOKED)
+    target_channel = (integration or {}).get('slack_channel_id') or APPOINTMENT_REQUESTS_CHANNEL
+    result = post_message(target_channel, text=text, blocks=blocks)
     if not result or not result.get('ok'):
         # Slack down or rate-limited — let Kafka redeliver.
         log.warning(

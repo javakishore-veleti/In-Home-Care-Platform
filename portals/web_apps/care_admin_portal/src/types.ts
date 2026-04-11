@@ -85,3 +85,28 @@ export interface DashboardStats {
   total_members: number
   todays_visits: number
 }
+
+export interface SlackIntegration {
+  id: number
+  slack_channel_id: string
+  slack_channel_name: string
+  event_type: string
+  enabled: boolean
+  created_at?: string | null
+  updated_at?: string | null
+}
+
+export interface SlackChannelRow {
+  id: string
+  name: string
+  is_member: boolean
+  is_private: boolean
+  is_archived: boolean
+  integrations: SlackIntegration[]
+}
+
+export interface SlackChannelsResponse {
+  channels: SlackChannelRow[]
+  bot_user_id: string | null
+  team: string | null
+}

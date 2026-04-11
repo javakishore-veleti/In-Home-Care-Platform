@@ -9,6 +9,7 @@ import { DashboardPage } from './pages/DashboardPage'
 import { MemberDetailPage } from './pages/MemberDetailPage'
 import { MembersPage } from './pages/MembersPage'
 import { SignInPage } from './pages/SignInPage'
+import { SlackIntegrationsPage } from './pages/SlackIntegrationsPage'
 import { StaffPage } from './pages/StaffPage'
 import { VisitDetailPage } from './pages/VisitDetailPage'
 import { VisitsPage } from './pages/VisitsPage'
@@ -28,6 +29,7 @@ function App() {
           <Route path="/app/members" element={<MembersPage />} />
           <Route path="/app/members/:memberId" element={<MemberDetailPage />} />
           <Route path="/app/staff" element={<StaffPage />} />
+          <Route path="/app/slack-integrations" element={<SlackIntegrationsPage />} />
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/app" replace />} />

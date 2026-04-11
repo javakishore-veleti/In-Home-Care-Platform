@@ -9,6 +9,7 @@ const NAV = [
   { to: '/app/visits', label: 'Visits' },
   { to: '/app/members', label: 'Members' },
   { to: '/app/staff', label: 'Staff' },
+  { to: '/app/slack-integrations', label: 'Slack Integrations' },
 ]
 
 export function AppShell() {
