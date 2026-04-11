@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 DIR="$(cd "$(dirname "$0")" && pwd)"
+
 echo "=== Airflow ==="
 docker compose -f "$DIR/Airflow/docker-compose.yml" down
-
 
 echo "=== Observability ==="
 docker compose -f "$DIR/Observability/Kibana/docker-compose.yml" down
@@ -24,5 +24,8 @@ docker compose -f "$DIR/Postgres/docker-compose.yml" down
 echo "=== Core infrastructure ==="
 docker compose -f "$DIR/Kafka/docker-compose.yml" down
 docker compose -f "$DIR/MongoDB/docker-compose.yml" down
+
+echo "=== Removing shared network ==="
+docker network rm in-home-care-network 2>/dev/null || echo "Network already removed"
 
 echo "All stacks down."

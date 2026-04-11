@@ -2,6 +2,9 @@
 set -euo pipefail
 DIR="$(cd "$(dirname "$0")" && pwd)"
 
+echo "=== Creating shared network ==="
+docker network create in-home-care-network 2>/dev/null || echo "Network in-home-care-network already exists"
+
 echo "=== Core infrastructure ==="
 docker compose -f "$DIR/MongoDB/docker-compose.yml" up -d
 docker compose -f "$DIR/Kafka/docker-compose.yml" up -d
@@ -22,7 +25,7 @@ docker compose -f "$DIR/Observability/Prometheus/docker-compose.yml" up -d
 docker compose -f "$DIR/Observability/Grafana/docker-compose.yml" up -d
 docker compose -f "$DIR/Observability/Kibana/docker-compose.yml" up -d
 
-echo "All stacks up."
-
 echo "=== Airflow ==="
 docker compose -f "$DIR/Airflow/docker-compose.yml" up -d
+
+echo "All stacks up on network: in-home-care-network"

@@ -1,7 +1,7 @@
 services:
   kafka:
     image: bitnami/kafka:3.7
-    container_name: ihcp-kafka
+    container_name: in-home-care-kafka
     restart: unless-stopped
     ports:
       - "9092:9092"
@@ -17,3 +17,7 @@ services:
       - kafka-data:/bitnami/kafka
 volumes:
   kafka-data:
+
+networks:
+  in-home-care-network:
+    external: true

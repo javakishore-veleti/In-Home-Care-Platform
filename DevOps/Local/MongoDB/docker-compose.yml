@@ -1,7 +1,7 @@
 services:
   mongodb:
     image: mongo:7.0
-    container_name: ihcp-mongodb
+    container_name: in-home-care-mongodb
     restart: unless-stopped
     ports:
       - "27017:27017"
@@ -13,3 +13,7 @@ services:
       - mongodb-data:/data/db
 volumes:
   mongodb-data:
+
+networks:
+  in-home-care-network:
+    external: true

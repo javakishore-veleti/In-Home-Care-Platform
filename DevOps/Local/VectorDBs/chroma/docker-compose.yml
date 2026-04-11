@@ -1,7 +1,7 @@
 services:
   chroma:
     image: chromadb/chroma:0.5.5
-    container_name: ihcp-vec-chroma
+    container_name: in-home-care-vec-chroma
     restart: unless-stopped
     ports:
       - "8000:8000"
@@ -12,3 +12,7 @@ services:
       ANONYMIZED_TELEMETRY: "FALSE"
 volumes:
   chroma-data:
+
+networks:
+  in-home-care-network:
+    external: true

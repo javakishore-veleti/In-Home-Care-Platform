@@ -1,7 +1,7 @@
 services:
   grafana:
     image: grafana/grafana:11.1.0
-    container_name: ihcp-grafana
+    container_name: in-home-care-grafana
     restart: unless-stopped
     ports:
       - "3000:3000"
@@ -12,3 +12,7 @@ services:
       - grafana-data:/var/lib/grafana
 volumes:
   grafana-data:
+
+networks:
+  in-home-care-network:
+    external: true

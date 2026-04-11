@@ -1,7 +1,7 @@
 services:
   etcd:
     image: quay.io/coreos/etcd:v3.5.16
-    container_name: ihcp-vec-milvus-etcd
+    container_name: in-home-care-vec-milvus-etcd
     environment:
       ETCD_AUTO_COMPACTION_MODE: revision
       ETCD_AUTO_COMPACTION_RETENTION: "1000"
@@ -11,7 +11,7 @@ services:
     command: etcd -advertise-client-urls=http://etcd:2379 -listen-client-urls http://0.0.0.0:2379 --data-dir /etcd
   minio:
     image: minio/minio:RELEASE.2024-08-26T15-33-07Z
-    container_name: ihcp-vec-milvus-minio
+    container_name: in-home-care-vec-milvus-minio
     environment:
       MINIO_ACCESS_KEY: minioadmin
       MINIO_SECRET_KEY: minioadmin
@@ -20,7 +20,7 @@ services:
     command: minio server /minio_data
   milvus:
     image: milvusdb/milvus:v2.4.10
-    container_name: ihcp-vec-milvus
+    container_name: in-home-care-vec-milvus
     command: ["milvus", "run", "standalone"]
     environment:
       ETCD_ENDPOINTS: etcd:2379
@@ -36,3 +36,7 @@ volumes:
   etcd-data:
   minio-data:
   milvus-data:
+
+networks:
+  in-home-care-network:
+    external: true

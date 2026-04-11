@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 DIR="$(cd "$(dirname "$0")" && pwd)"
 
+echo "=== Network ==="
+docker network inspect in-home-care-network --format '{{.Name}}: {{len .Containers}} containers' 2>/dev/null || echo "  Network: not created"
+
+echo ""
 echo "=== Core infrastructure ==="
 docker compose -f "$DIR/MongoDB/docker-compose.yml" ps 2>/dev/null || echo "  MongoDB: not running"
 docker compose -f "$DIR/Kafka/docker-compose.yml" ps 2>/dev/null || echo "  Kafka: not running"

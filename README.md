@@ -202,7 +202,7 @@ This runs four steps in order:
 | `setup:local:venv:create` | `conda create -y -p ~/runtime_data/python_venvs/In-Home-Care-Platform python=3.13` |
 | `setup:local:venv:install` | `pip install -r requirements.txt` (all middleware + agentic flow deps) |
 | `setup:local:portals:install` | `npm install` inside member_portal, care_admin_portal, customer_support_app |
-| `setup:local:docker:up` | Docker Compose up for MongoDB, Kafka, Postgres, Redis, VectorDBs, Prometheus, Grafana, Kibana |
+| `setup:local:docker:up` | Docker Compose up for MongoDB, Kafka, Postgres, Redis, VectorDBs, Prometheus, Grafana, Kibana, Airflow — all on shared network `in-home-care-network` |
 
 To activate the conda venv in your shell (for running Python directly):
 

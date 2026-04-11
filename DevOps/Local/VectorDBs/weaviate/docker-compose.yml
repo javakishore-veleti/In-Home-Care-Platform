@@ -1,7 +1,7 @@
 services:
   weaviate:
     image: cr.weaviate.io/semitechnologies/weaviate:1.26.1
-    container_name: ihcp-vec-weaviate
+    container_name: in-home-care-vec-weaviate
     restart: unless-stopped
     ports:
       - "8080:8080"
@@ -19,8 +19,12 @@ services:
       - t2v
   t2v:
     image: cr.weaviate.io/semitechnologies/transformers-inference:sentence-transformers-multi-qa-MiniLM-L6-cos-v1
-    container_name: ihcp-vec-weaviate-t2v
+    container_name: in-home-care-vec-weaviate-t2v
     environment:
       ENABLE_CUDA: "0"
 volumes:
   weaviate-data:
+
+networks:
+  in-home-care-network:
+    external: true
