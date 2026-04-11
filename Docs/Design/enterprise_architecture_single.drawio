@@ -325,4 +325,135 @@
       </root>
     </mxGraphModel>
   </diagram>
+<diagram name="8. Middleware + Data, Events &amp; AI" id="ihcp-enterprise-single-2">
+    <mxGraphModel dx="1500" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="900" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="t8" value="Middleware + Data, Events &amp; AI — focused view" style="text;html=1;align=center;verticalAlign=middle;fontSize=16;fontStyle=1" vertex="1" parent="1"><mxGeometry x="20" y="20" width="1360" height="30" as="geometry"/></mxCell>
+        <mxCell id="z81" value="Middleware Services" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eef2ff;strokeColor=#a5b4fc;fontStyle=1" vertex="1" parent="1"><mxGeometry x="40" y="80" width="680" height="720" as="geometry"/></mxCell>
+        <mxCell id="z82" value="Data, Events &amp; AI Platforms" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fffbeb;strokeColor=#fcd34d;fontStyle=1" vertex="1" parent="1"><mxGeometry x="760" y="80" width="600" height="720" as="geometry"/></mxCell>
+
+        <mxCell id="api8" value="API Gateway&#10;FastAPI ingress&#10;auth · routing · rate limiting" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dbeafe;strokeColor=#60a5fa" vertex="1" parent="1"><mxGeometry x="80" y="130" width="220" height="90" as="geometry"/></mxCell>
+        <mxCell id="mcp8" value="MCP Gateway&#10;FastMCP + ADK&#10;LLM tool exposure" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ddd6fe;strokeColor=#8b5cf6" vertex="1" parent="1"><mxGeometry x="340" y="130" width="220" height="90" as="geometry"/></mxCell>
+        <mxCell id="auth8" value="auth_svc&#10;identity · JWT · roles" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dcfce7;strokeColor=#4ade80" vertex="1" parent="1"><mxGeometry x="80" y="270" width="180" height="70" as="geometry"/></mxCell>
+        <mxCell id="member8" value="member_svc&#10;member profiles" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dcfce7;strokeColor=#4ade80" vertex="1" parent="1"><mxGeometry x="280" y="270" width="180" height="70" as="geometry"/></mxCell>
+        <mxCell id="appt8" value="appointment_svc&#10;book / cancel / reschedule" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dcfce7;strokeColor=#4ade80" vertex="1" parent="1"><mxGeometry x="480" y="270" width="200" height="70" as="geometry"/></mxCell>
+        <mxCell id="visit8" value="visit_management_svc&#10;visit lifecycle · listing" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dcfce7;strokeColor=#4ade80" vertex="1" parent="1"><mxGeometry x="80" y="380" width="200" height="70" as="geometry"/></mxCell>
+        <mxCell id="ingest8" value="visit_ingest_svc&#10;field data ingestion" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dcfce7;strokeColor=#4ade80" vertex="1" parent="1"><mxGeometry x="300" y="380" width="180" height="70" as="geometry"/></mxCell>
+        <mxCell id="doc8" value="document_intelligence_svc&#10;OCR · extraction" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dcfce7;strokeColor=#4ade80" vertex="1" parent="1"><mxGeometry x="500" y="380" width="180" height="70" as="geometry"/></mxCell>
+        <mxCell id="col8" value="collection_ingest_svc&#10;batch / collection pipelines" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dcfce7;strokeColor=#4ade80" vertex="1" parent="1"><mxGeometry x="80" y="490" width="200" height="70" as="geometry"/></mxCell>
+        <mxCell id="flow81" value="visit_intelligence_flow&#10;LangGraph scoring &amp; follow-up detection" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe4e6;strokeColor=#fb7185" vertex="1" parent="1"><mxGeometry x="340" y="500" width="220" height="80" as="geometry"/></mxCell>
+        <mxCell id="flow82" value="slack_channel_responder_flow&#10;RAG Q&amp;A + threaded replies" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe4e6;strokeColor=#fb7185" vertex="1" parent="1"><mxGeometry x="80" y="620" width="220" height="80" as="geometry"/></mxCell>
+        <mxCell id="flow83" value="document_author_flow&#10;summary drafting + structured outputs" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe4e6;strokeColor=#fb7185" vertex="1" parent="1"><mxGeometry x="340" y="620" width="220" height="80" as="geometry"/></mxCell>
+        <mxCell id="note8" value="Focused tab: hides personas/portals so the middleware-to-platform relationships are easier to read." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#cbd5e1;dashed=1" vertex="1" parent="1"><mxGeometry x="80" y="730" width="600" height="40" as="geometry"/></mxCell>
+
+        <mxCell id="mongo8" value="MongoDB&#10;members · visits · documents&#10;system of record" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fef3c7;strokeColor=#f59e0b" vertex="1" parent="1"><mxGeometry x="830" y="140" width="220" height="90" as="geometry"/></mxCell>
+        <mxCell id="kafka8" value="Kafka&#10;appointment.booked&#10;visit.updated&#10;async events" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fef3c7;strokeColor=#f59e0b" vertex="1" parent="1"><mxGeometry x="1080" y="140" width="220" height="90" as="geometry"/></mxCell>
+        <mxCell id="vector8" value="VectorDB&#10;policies · tickets · visit context&#10;retrieval memory" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fef3c7;strokeColor=#f59e0b" vertex="1" parent="1"><mxGeometry x="830" y="290" width="220" height="90" as="geometry"/></mxCell>
+        <mxCell id="llm8" value="LLM Layer&#10;reasoning · drafting · copilots" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fef3c7;strokeColor=#f59e0b" vertex="1" parent="1"><mxGeometry x="1080" y="290" width="220" height="90" as="geometry"/></mxCell>
+        <mxCell id="gcp8" value="GCP Document AI&#10;OCR + field extraction" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fef3c7;strokeColor=#f59e0b" vertex="1" parent="1"><mxGeometry x="830" y="440" width="220" height="80" as="geometry"/></mxCell>
+        <mxCell id="state8" value="Redis / Postgres / cache support&#10;workflow state · sessions · support stores" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#cbd5e1;dashed=1" vertex="1" parent="1"><mxGeometry x="1080" y="445" width="220" height="70" as="geometry"/></mxCell>
+        <mxCell id="obs8" value="Observability&#10;Prometheus · Grafana · Kibana" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e2e8f0;strokeColor=#94a3b8" vertex="1" parent="1"><mxGeometry x="830" y="580" width="220" height="70" as="geometry"/></mxCell>
+        <mxCell id="sec8" value="Security &amp; Governance&#10;JWT · RBAC · auditability" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e2e8f0;strokeColor=#94a3b8" vertex="1" parent="1"><mxGeometry x="1080" y="580" width="220" height="70" as="geometry"/></mxCell>
+
+        <mxCell id="e801" style="endArrow=block;html=1;strokeWidth=2;strokeColor=#64748b;" edge="1" parent="1" source="api8" target="auth8"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e802" style="endArrow=block;html=1;strokeWidth=2;strokeColor=#64748b;" edge="1" parent="1" source="api8" target="member8"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e803" style="endArrow=block;html=1;strokeWidth=2;strokeColor=#64748b;" edge="1" parent="1" source="api8" target="appt8"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e804" style="endArrow=block;html=1;strokeWidth=2;strokeColor=#64748b;" edge="1" parent="1" source="api8" target="visit8"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e805" style="endArrow=block;html=1;strokeWidth=2;strokeColor=#64748b;" edge="1" parent="1" source="api8" target="ingest8"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e806" style="endArrow=block;html=1;strokeWidth=2;strokeColor=#64748b;" edge="1" parent="1" source="api8" target="col8"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e807" value="tool bridge" style="endArrow=block;html=1;strokeWidth=2;strokeColor=#7c3aed;" edge="1" parent="1" source="api8" target="mcp8"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e808" value="tool / context" style="endArrow=block;html=1;strokeWidth=2;strokeColor=#7c3aed;" edge="1" parent="1" source="mcp8" target="flow81"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e809" value="tool / context" style="endArrow=block;html=1;strokeWidth=2;strokeColor=#7c3aed;" edge="1" parent="1" source="mcp8" target="flow82"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e810" value="tool / context" style="endArrow=block;html=1;strokeWidth=2;strokeColor=#7c3aed;" edge="1" parent="1" source="mcp8" target="flow83"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e811" style="endArrow=block;html=1;strokeWidth=2;strokeColor=#64748b;" edge="1" parent="1" source="ingest8" target="doc8"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e812" style="endArrow=block;html=1;strokeWidth=2;strokeColor=#64748b;" edge="1" parent="1" source="doc8" target="gcp8"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e813" style="endArrow=block;html=1;strokeWidth=2;strokeColor=#64748b;" edge="1" parent="1" source="auth8" target="mongo8"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e814" style="endArrow=block;html=1;strokeWidth=2;strokeColor=#64748b;" edge="1" parent="1" source="member8" target="mongo8"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e815" style="endArrow=block;html=1;strokeWidth=2;strokeColor=#64748b;" edge="1" parent="1" source="appt8" target="mongo8"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e816" style="endArrow=block;html=1;strokeWidth=2;strokeColor=#64748b;" edge="1" parent="1" source="visit8" target="mongo8"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e817" style="endArrow=block;html=1;strokeWidth=2;strokeColor=#64748b;" edge="1" parent="1" source="ingest8" target="mongo8"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e818" style="endArrow=block;html=1;strokeWidth=2;strokeColor=#64748b;" edge="1" parent="1" source="doc8" target="mongo8"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e819" value="event" style="endArrow=block;html=1;strokeWidth=2;strokeColor=#f59e0b;" edge="1" parent="1" source="appt8" target="kafka8"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e820" value="event" style="endArrow=block;html=1;strokeWidth=2;strokeColor=#f59e0b;" edge="1" parent="1" source="visit8" target="kafka8"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e821" value="event" style="endArrow=block;html=1;strokeWidth=2;strokeColor=#f59e0b;" edge="1" parent="1" source="ingest8" target="kafka8"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e822" value="consume" style="endArrow=block;html=1;strokeWidth=2;strokeColor=#f59e0b;" edge="1" parent="1" source="kafka8" target="flow81"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e823" value="RAG" style="endArrow=block;html=1;strokeWidth=2;strokeColor=#7c3aed;" edge="1" parent="1" source="flow81" target="vector8"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e824" value="RAG" style="endArrow=block;html=1;strokeWidth=2;strokeColor=#7c3aed;" edge="1" parent="1" source="flow82" target="vector8"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e825" value="prompt / reasoning" style="endArrow=block;html=1;strokeWidth=2;strokeColor=#7c3aed;" edge="1" parent="1" source="flow81" target="llm8"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e826" value="prompt / reasoning" style="endArrow=block;html=1;strokeWidth=2;strokeColor=#7c3aed;" edge="1" parent="1" source="flow82" target="llm8"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e827" value="drafting" style="endArrow=block;html=1;strokeWidth=2;strokeColor=#7c3aed;" edge="1" parent="1" source="flow83" target="llm8"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e828" style="endArrow=block;html=1;dashed=1;strokeColor=#94a3b8;" edge="1" parent="1" source="api8" target="obs8"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e829" style="endArrow=block;html=1;dashed=1;strokeColor=#94a3b8;" edge="1" parent="1" source="mcp8" target="sec8"><mxGeometry relative="1" as="geometry"/></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+<diagram name="9. Enterprise Architecture - Simplified" id="ihcp-enterprise-single-3">
+    <mxGraphModel dx="1500" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="900" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="t9" value="Enterprise Architecture — simplified executive view" style="text;html=1;align=center;verticalAlign=middle;fontSize=16;fontStyle=1" vertex="1" parent="1"><mxGeometry x="20" y="20" width="1360" height="30" as="geometry"/></mxCell>
+        <mxCell id="sub9" value="Same architecture story as the full enterprise overview, but with fewer relationships so the major layers read cleanly left-to-right." style="text;html=1;align=center;verticalAlign=middle;fontSize=11;fontColor=#475569" vertex="1" parent="1"><mxGeometry x="180" y="52" width="1040" height="20" as="geometry"/></mxCell>
+
+        <mxCell id="z91" value="Personas &amp; Channels" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8fafc;strokeColor=#cbd5e1;fontStyle=1" vertex="1" parent="1"><mxGeometry x="30" y="95" width="220" height="690" as="geometry"/></mxCell>
+        <mxCell id="z92" value="Portals" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ecfdf5;strokeColor=#86efac;fontStyle=1" vertex="1" parent="1"><mxGeometry x="280" y="95" width="210" height="690" as="geometry"/></mxCell>
+        <mxCell id="z93" value="Middleware" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eef2ff;strokeColor=#a5b4fc;fontStyle=1" vertex="1" parent="1"><mxGeometry x="520" y="95" width="320" height="690" as="geometry"/></mxCell>
+        <mxCell id="z94" value="Data + AI Platforms" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fffbeb;strokeColor=#fcd34d;fontStyle=1" vertex="1" parent="1"><mxGeometry x="870" y="95" width="240" height="690" as="geometry"/></mxCell>
+        <mxCell id="z95" value="Ops &amp; Governance" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff1f2;strokeColor=#fda4af;fontStyle=1" vertex="1" parent="1"><mxGeometry x="1140" y="95" width="230" height="690" as="geometry"/></mxCell>
+
+        <mxCell id="p91" value="Slack Workspace&#10;#field-ops · #customer-support · #care-admin" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dbeafe;strokeColor=#60a5fa" vertex="1" parent="1"><mxGeometry x="55" y="145" width="170" height="80" as="geometry"/></mxCell>
+        <mxCell id="p92" value="Member / Patient" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dbeafe;strokeColor=#60a5fa" vertex="1" parent="1"><mxGeometry x="55" y="260" width="170" height="60" as="geometry"/></mxCell>
+        <mxCell id="p93" value="Field Staff" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dbeafe;strokeColor=#60a5fa" vertex="1" parent="1"><mxGeometry x="55" y="350" width="170" height="60" as="geometry"/></mxCell>
+        <mxCell id="p94" value="Customer Support" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dbeafe;strokeColor=#60a5fa" vertex="1" parent="1"><mxGeometry x="55" y="440" width="170" height="60" as="geometry"/></mxCell>
+        <mxCell id="p95" value="Admin Staff" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dbeafe;strokeColor=#60a5fa" vertex="1" parent="1"><mxGeometry x="55" y="530" width="170" height="60" as="geometry"/></mxCell>
+
+        <mxCell id="po91" value="Member Portal" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dcfce7;strokeColor=#4ade80" vertex="1" parent="1"><mxGeometry x="305" y="170" width="160" height="70" as="geometry"/></mxCell>
+        <mxCell id="po92" value="Field Staff App" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dcfce7;strokeColor=#4ade80" vertex="1" parent="1"><mxGeometry x="305" y="285" width="160" height="70" as="geometry"/></mxCell>
+        <mxCell id="po93" value="Customer Support App" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dcfce7;strokeColor=#4ade80" vertex="1" parent="1"><mxGeometry x="305" y="400" width="160" height="70" as="geometry"/></mxCell>
+        <mxCell id="po94" value="Care Admin Portal" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dcfce7;strokeColor=#4ade80" vertex="1" parent="1"><mxGeometry x="305" y="515" width="160" height="70" as="geometry"/></mxCell>
+        <mxCell id="po95" value="Slack AI Copilot Surface" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dcfce7;strokeColor=#4ade80" vertex="1" parent="1"><mxGeometry x="305" y="630" width="160" height="70" as="geometry"/></mxCell>
+
+        <mxCell id="mw91" value="API Gateway" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ddd6fe;strokeColor=#8b5cf6" vertex="1" parent="1"><mxGeometry x="585" y="160" width="190" height="80" as="geometry"/></mxCell>
+        <mxCell id="mw92" value="Core Microservices&#10;auth · member · appointment&#10;visit mgmt · ingest · doc intel" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ddd6fe;strokeColor=#8b5cf6" vertex="1" parent="1"><mxGeometry x="585" y="300" width="190" height="100" as="geometry"/></mxCell>
+        <mxCell id="mw93" value="MCP Gateway" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ddd6fe;strokeColor=#8b5cf6" vertex="1" parent="1"><mxGeometry x="585" y="470" width="190" height="80" as="geometry"/></mxCell>
+        <mxCell id="mw94" value="LangGraph Agentic Flows&#10;visit intelligence · slack responder&#10;document author" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe4e6;strokeColor=#fb7185" vertex="1" parent="1"><mxGeometry x="585" y="610" width="190" height="100" as="geometry"/></mxCell>
+
+        <mxCell id="dp91" value="MongoDB" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fef3c7;strokeColor=#f59e0b" vertex="1" parent="1"><mxGeometry x="905" y="170" width="170" height="70" as="geometry"/></mxCell>
+        <mxCell id="dp92" value="Kafka" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fef3c7;strokeColor=#f59e0b" vertex="1" parent="1"><mxGeometry x="905" y="290" width="170" height="70" as="geometry"/></mxCell>
+        <mxCell id="dp93" value="VectorDB" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fef3c7;strokeColor=#f59e0b" vertex="1" parent="1"><mxGeometry x="905" y="410" width="170" height="70" as="geometry"/></mxCell>
+        <mxCell id="dp94" value="LLM Layer" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fef3c7;strokeColor=#f59e0b" vertex="1" parent="1"><mxGeometry x="905" y="530" width="170" height="70" as="geometry"/></mxCell>
+        <mxCell id="dp95" value="GCP Document AI" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fef3c7;strokeColor=#f59e0b" vertex="1" parent="1"><mxGeometry x="905" y="650" width="170" height="70" as="geometry"/></mxCell>
+
+        <mxCell id="op91" value="DevOps Local Stacks" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e2e8f0;strokeColor=#94a3b8" vertex="1" parent="1"><mxGeometry x="1170" y="180" width="170" height="70" as="geometry"/></mxCell>
+        <mxCell id="op92" value="Observability" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e2e8f0;strokeColor=#94a3b8" vertex="1" parent="1"><mxGeometry x="1170" y="320" width="170" height="70" as="geometry"/></mxCell>
+        <mxCell id="op93" value="Security &amp; Access" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e2e8f0;strokeColor=#94a3b8" vertex="1" parent="1"><mxGeometry x="1170" y="460" width="170" height="70" as="geometry"/></mxCell>
+        <mxCell id="op94" value="Architecture &amp; Delivery" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e2e8f0;strokeColor=#94a3b8" vertex="1" parent="1"><mxGeometry x="1170" y="600" width="170" height="70" as="geometry"/></mxCell>
+
+        <mxCell id="ee901" style="endArrow=block;html=1;strokeWidth=2;strokeColor=#64748b;" edge="1" parent="1" source="p92" target="po91"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="ee902" style="endArrow=block;html=1;strokeWidth=2;strokeColor=#64748b;" edge="1" parent="1" source="p93" target="po92"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="ee903" style="endArrow=block;html=1;strokeWidth=2;strokeColor=#64748b;" edge="1" parent="1" source="p94" target="po93"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="ee904" style="endArrow=block;html=1;strokeWidth=2;strokeColor=#64748b;" edge="1" parent="1" source="p95" target="po94"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="ee905" style="endArrow=block;html=1;strokeWidth=2;strokeColor=#64748b;" edge="1" parent="1" source="p91" target="po95"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="ee906" style="endArrow=block;html=1;strokeWidth=2;strokeColor=#64748b;" edge="1" parent="1" source="po91" target="mw91"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="ee907" style="endArrow=block;html=1;strokeWidth=2;strokeColor=#64748b;" edge="1" parent="1" source="po92" target="mw91"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="ee908" style="endArrow=block;html=1;strokeWidth=2;strokeColor=#64748b;" edge="1" parent="1" source="po93" target="mw91"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="ee909" style="endArrow=block;html=1;strokeWidth=2;strokeColor=#64748b;" edge="1" parent="1" source="po94" target="mw91"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="ee910" value="AI assist" style="endArrow=block;html=1;strokeWidth=2;strokeColor=#7c3aed;" edge="1" parent="1" source="po95" target="mw93"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="ee911" style="endArrow=block;html=1;strokeWidth=2;strokeColor=#64748b;" edge="1" parent="1" source="mw91" target="mw92"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="ee912" value="tool bridge" style="endArrow=block;html=1;strokeWidth=2;strokeColor=#7c3aed;" edge="1" parent="1" source="mw91" target="mw93"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="ee913" value="tool / context" style="endArrow=block;html=1;strokeWidth=2;strokeColor=#7c3aed;" edge="1" parent="1" source="mw93" target="mw94"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="ee914" style="endArrow=block;html=1;strokeWidth=2;strokeColor=#64748b;" edge="1" parent="1" source="mw92" target="dp91"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="ee915" value="events" style="endArrow=block;html=1;strokeWidth=2;strokeColor=#f59e0b;" edge="1" parent="1" source="mw92" target="dp92"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="ee916" value="RAG" style="endArrow=block;html=1;strokeWidth=2;strokeColor=#7c3aed;" edge="1" parent="1" source="mw94" target="dp93"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="ee917" value="reasoning" style="endArrow=block;html=1;strokeWidth=2;strokeColor=#7c3aed;" edge="1" parent="1" source="mw94" target="dp94"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="ee918" style="endArrow=block;html=1;strokeWidth=2;strokeColor=#64748b;" edge="1" parent="1" source="mw92" target="dp95"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="ee919" value="provisions / operates" style="endArrow=block;html=1;dashed=1;strokeColor=#94a3b8;" edge="1" parent="1" source="op91" target="dp91"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="ee920" value="telemetry" style="endArrow=block;html=1;dashed=1;strokeColor=#94a3b8;" edge="1" parent="1" source="mw92" target="op92"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="ee921" value="policy" style="endArrow=block;html=1;dashed=1;strokeColor=#94a3b8;" edge="1" parent="1" source="op93" target="mw91"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="ee922" value="standards" style="endArrow=block;html=1;dashed=1;strokeColor=#94a3b8;" edge="1" parent="1" source="op94" target="mw94"><mxGeometry relative="1" as="geometry"/></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
 </mxfile>
