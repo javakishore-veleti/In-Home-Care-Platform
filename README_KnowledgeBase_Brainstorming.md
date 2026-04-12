@@ -1001,5 +1001,241 @@ def search(collection_slug: str, query: str, top_k: int = 5,
 
 ---
 
+---
+
+## 15. Multi-Jurisdiction Knowledge Scoping
+
+### 15.1 The problem
+
+A care protocol for "Personal Care & Companionship" in California is
+literally different from Texas. State-level differences include:
+
+- **Scope-of-practice laws** — what a home health aide is legally
+  allowed to do varies by state (e.g. medication administration is
+  allowed in some states, prohibited in others)
+- **Medicaid/EVV mandates** — Electronic Visit Verification rules,
+  billing codes, and documentation requirements are state-specific
+- **Aide certification requirements** — training hours, continuing
+  education, background check rules
+- **Local health department regulations** — county-level reporting,
+  infection control, emergency protocols
+- **Payer-specific rules** — different insurance carriers have
+  different coverage rules, prior-auth requirements, documentation
+  standards
+
+If the knowledge base serves a single org in one state, this doesn't
+matter. The moment it serves multiple states or multiple customer
+orgs, every RAG query must be jurisdiction-aware or it will surface
+wrong / non-compliant information.
+
+### 15.2 How industry SaaS companies solve this
+
+Three patterns, all composable:
+
+#### Pattern 1: Hierarchical knowledge scoping (most common)
+
+Used by **Epic**, **PointClickCare**, **Veeva Vault**, and
+**ServiceNow**. Knowledge is organized in layers that cascade like
+CSS — more specific layers override or supplement less specific ones:
+
+```
+Global (universal safety protocols, WHO guidelines)
+  └── Country / Federal (US: CMS Conditions of Participation, HIPAA rules)
+      └── State (CA, TX, NY — state licensing, Medicaid rules, EVV mandates)
+          └── Region / County (optional — local health dept rules, rural vs urban)
+              └── Organization (customer-specific SOPs, internal policies)
+                  └── Service Type (our existing collections)
+```
+
+At query time, the RAG filter says: "give me chunks that apply to
+Global + US federal + California + this org + this service type."
+A field officer in Texas sees Texas-specific rules; one in California
+sees California's. Both see the federal CMS baseline. The most
+specific match ranks highest in the results.
+
+#### Pattern 2: Geo-tagged documents with jurisdiction filtering
+
+Used by **Salesforce Knowledge** ("data categories"),
+**Veeva Vault** ("country/region" metadata), and compliance-heavy SaaS
+like **Avalara** (tax rules by jurisdiction). Every document is tagged
+with the jurisdictions it applies to:
+
+```
+Document: "California Home Health Aide Scope of Practice"
+  → jurisdictions: [US, US-CA]
+  → service_types: [personal-care, skilled-nursing, home-health-aide]
+
+Document: "CMS Conditions of Participation (federal)"
+  → jurisdictions: [US]
+  → service_types: [*]  (applies to all)
+
+Document: "Acme Home Care — Infection Control SOP"
+  → jurisdictions: [US, US-CA, US-TX]  (Acme operates in CA + TX)
+  → service_types: [*]
+  → org_id: acme-home-care
+```
+
+The VectorDB query adds a metadata filter:
+`WHERE jurisdiction IN ('US', 'US-CA') AND collection_id = :svc_type`.
+Only applicable docs surface in the briefing.
+
+#### Pattern 3: Tenant-scoped knowledge with shared base inheritance
+
+Used by every multi-tenant SaaS (**Salesforce**, **ServiceNow**,
+**Glean**). Each customer org gets its own namespace but inherits from
+a shared "base" that the platform vendor maintains:
+
+```
+Platform-maintained base (you maintain this):
+  → Federal regulations, universal protocols, best practices
+  → Updated centrally — all customers see the update immediately
+  → This is the subscription value: "we track regulatory changes
+    so you don't have to"
+
+Customer-specific layer (each org uploads their own):
+  → Their internal SOPs, their preferred checklists, their training
+    videos, their medication lists
+  → Only visible to their users
+  → This is the switching cost: they've uploaded their institutional
+    knowledge, it's indexed, their field staff rely on it daily
+
+Combined at query time:
+  → RAG search unions both layers
+  → Customer-specific docs rank higher (more specific = more relevant)
+  → Platform docs fill gaps the customer hasn't covered
+```
+
+### 15.3 Real-world validation
+
+| Company | Vertical | How they scope knowledge | Pricing signal |
+|---|---|---|---|
+| **PointClickCare** | Long-term / post-acute care | State-specific assessment forms, compliance rules, regulatory reporting. Each facility tagged with its state. | $5–15/bed/month |
+| **MatrixCare / Brightree** | Home health + hospice | State-specific EVV rules, OASIS assessment templates, payer-specific billing rules. | $3–10/user/month |
+| **Veeva Vault** | Pharma / life sciences | Country-level regulatory content, automatic jurisdiction filtering, audit trails per region. | $50K+/year enterprise |
+| **Salesforce Knowledge** | Horizontal, used in healthcare | "Data categories" for geography, department, product — filter articles by category at query time. | Built into Service Cloud ($150+/user/month) |
+| **Glean** | Horizontal enterprise search | Inherits permissions from source systems (Google Drive, Confluence, etc.). No explicit jurisdiction model — relies on ACLs. | $10–25/user/month |
+
+### 15.4 Proposed data model changes
+
+These columns added to the Phase 1 data model. Designed so a
+single-state v1 deployment works without setting any of them (all
+defaults are permissive), but a multi-state / multi-tenant deployment
+can scope everything correctly.
+
+```sql
+-- Scoping on collections (coarse-grained: "this collection is for CA orgs")
+ALTER TABLE knowledge_schema.collections ADD COLUMN
+    org_id       VARCHAR(100) NOT NULL DEFAULT 'platform',
+    -- 'platform' = shared base maintained by us
+    -- 'acme-home-care' = customer-specific
+    jurisdiction VARCHAR(20);
+    -- NULL = global (applies everywhere)
+    -- 'US'    = US federal
+    -- 'US-CA' = California
+    -- 'US-TX' = Texas
+    -- ISO 3166-2 codes for consistency
+
+-- Scoping on items (fine-grained: "this document applies to CA + TX")
+ALTER TABLE knowledge_schema.collection_items ADD COLUMN
+    jurisdictions TEXT[],
+    -- NULL or empty = global (applies everywhere)
+    -- {'US', 'US-CA'} = federal + California
+    -- Postgres array enables && (overlap) operator for fast filtering
+    org_id        VARCHAR(100) NOT NULL DEFAULT 'platform';
+```
+
+### 15.5 How the RAG query changes
+
+```python
+def search(
+    collection_slug: str,
+    query: str,
+    top_k: int = 5,
+    *,
+    org_id: str = "platform",
+    state: str | None = None,       # e.g. "US-CA"
+    mode: str = "current",
+    as_of: datetime | None = None,
+):
+    # EICopilot: mask service-type names for intent matching
+    masked_query = mask_service_types(query)
+    query_embedding = embed(masked_query)
+
+    # Build the jurisdiction filter chain
+    # Always include: global (NULL) + platform base
+    # If state is set: also include US federal + that state
+    jurisdictions = ["NULL"]  # global
+    if state:
+        country = state.split("-")[0]  # "US" from "US-CA"
+        jurisdictions.extend([country, state])
+
+    # LiveVectorLake: temporal filtering
+    if mode == "current":
+        temporal = "AND c.valid_until IS NULL"
+    else:
+        temporal = f"AND c.valid_from <= '{as_of}' AND (c.valid_until IS NULL OR c.valid_until > '{as_of}')"
+
+    results = db.execute(f"""
+        SELECT c.chunk_text, c.embedding <=> :query_embedding AS score,
+               i.title, i.item_type, col.name AS collection_name,
+               i.org_id, i.jurisdictions
+        FROM knowledge_schema.collection_chunks c
+        JOIN knowledge_schema.collection_items i ON i.id = c.item_id
+        JOIN knowledge_schema.collections col ON col.id = c.collection_id
+        WHERE col.slug = :collection_slug
+          -- Tenant scoping: platform base + this org's docs
+          AND (i.org_id = 'platform' OR i.org_id = :org_id)
+          -- Jurisdiction scoping: global + matching jurisdictions
+          AND (i.jurisdictions IS NULL
+               OR i.jurisdictions && :jurisdictions_array)
+          -- Temporal scoping (LiveVectorLake)
+          {temporal}
+        ORDER BY c.embedding <=> :query_embedding
+        LIMIT :top_k
+    """, ...)
+
+    return unmask_results(results, collection_slug)
+```
+
+### 15.6 Pricing and packaging implications
+
+The hierarchical scoping model naturally maps to SaaS pricing tiers:
+
+| Tier | What the customer gets | Who maintains it | Price signal |
+|---|---|---|---|
+| **Starter** | Platform base (federal + universal protocols) + their own uploads, single state | Platform base: us. Customer layer: them. | $5–10/user/month |
+| **Professional** | Above + state-specific regulatory packs for their operating states (auto-updated) | State packs: us, updated within 48h of regulatory changes. | $15–25/user/month |
+| **Enterprise** | Above + multi-state, multi-org, custom LangGraph workflows, compliance audit trail (temporal queries from LiveVectorLake) | Everything above + dedicated CSM. | $30–50/user/month, annual contract |
+
+The **platform-maintained layers** (federal + state packs) are the
+subscription value — customers pay because tracking 50 states' home
+health regulations is a full-time job they don't want to hire for.
+
+The **customer-specific layer** is the switching cost — once their
+institutional knowledge is indexed and their field staff rely on the
+daily briefings, switching means re-uploading everything and
+re-training the workflow habits.
+
+The **compliance audit trail** (temporal queries — "what knowledge
+was available when this visit happened?") is the enterprise upsell —
+regulated industries pay premium for defensible audit capability.
+
+### 15.7 Implementation phasing
+
+| Phase | Jurisdiction support | Effort |
+|---|---|---|
+| Phase 1 (Collections CRUD) | Add `org_id` + `jurisdiction` columns, default everything to `platform` + `NULL`. Single-state deployment works out of the box. | +30 min |
+| Phase 2 (VectorDB + search) | Add `jurisdictions` array to items, `&&` filter in search query. Admin can tag items with jurisdictions on upload. | +2 hours |
+| Phase 3 (LangGraph briefing) | Pass the claimed appointment's service_area → resolve to a state code → pass to RAG search as the `state` parameter. Briefings are now state-aware. | +1 hour |
+| Phase 4+ (multi-tenant) | `org_id` scoping in collections + items. Each customer org sees platform base + their own uploads. Separate admin portals per org (or org switcher). | +1–2 days |
+
+The key insight: **add the columns in Phase 1 even if you don't use
+them yet.** The cost is two `DEFAULT 'platform'` / `DEFAULT NULL`
+columns. The benefit is the data model doesn't have to be migrated
+later when you go multi-state or multi-tenant — you just start
+populating the columns.
+
+---
+
 *This document is a living brainstorm. Mark decisions with ✅ as you
 make them, then tell Claude "build phase N" to start implementation.*
