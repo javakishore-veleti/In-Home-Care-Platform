@@ -34,7 +34,11 @@ async def lifespan(_app: FastAPI):
 
 
 def create_app() -> FastAPI:
+    from prometheus_client import make_asgi_app as prom_asgi
+    from starlette.routing import Mount
+
     application = FastAPI(title='knowledge_agent_svc', version='0.1.0', lifespan=lifespan)
+    application.mount('/metrics', prom_asgi())
 
     @application.get('/healthz')
     def healthz() -> dict[str, str]:

@@ -5,3 +5,4 @@ structlog>=24.1
 python-dotenv>=1.0
 aiokafka>=0.11
 httpx>=0.27
+prometheus_client>=0.21

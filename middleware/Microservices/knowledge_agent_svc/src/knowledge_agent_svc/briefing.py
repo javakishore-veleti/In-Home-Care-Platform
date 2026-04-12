@@ -126,6 +126,11 @@ def _store_response(
 
 def _call_model_sync(model: dict[str, Any], system_prompt: str, user_prompt: str) -> dict[str, Any]:
     """Synchronous LLM call — runs in thread pool for parallelism."""
+    from .metrics import LLM_REQUESTS, LLM_TOKENS_INPUT, LLM_TOKENS_OUTPUT, LLM_COST_USD, LLM_LATENCY
+
+    model_id = model.get('id', 'unknown')
+    provider = model.get('provider', 'unknown')
+
     try:
         result = chat_completion(
             system_prompt,
@@ -137,8 +142,17 @@ def _call_model_sync(model: dict[str, Any], system_prompt: str, user_prompt: str
             temperature=0.3,
         )
         result['model_config'] = model
+        # Emit Prometheus metrics
+        LLM_REQUESTS.labels(model_id=model_id, provider=provider, status='success').inc()
+        LLM_TOKENS_INPUT.labels(model_id=model_id, provider=provider).inc(result.get('input_tokens', 0))
+        LLM_TOKENS_OUTPUT.labels(model_id=model_id, provider=provider).inc(result.get('output_tokens', 0))
+        input_cost = (result.get('input_tokens', 0) / 1000) * model.get('input_cost_per_1k', 0)
+        output_cost = (result.get('output_tokens', 0) / 1000) * model.get('output_cost_per_1k', 0)
+        LLM_COST_USD.labels(model_id=model_id, provider=provider).inc(input_cost + output_cost)
+        LLM_LATENCY.labels(model_id=model_id, provider=provider).observe(result.get('latency_ms', 0) / 1000)
         return result
     except Exception as exc:
+        LLM_REQUESTS.labels(model_id=model_id, provider=provider, status='error').inc()
         log.warning('briefing.model_failed model=%s error=%s', model.get('id'), exc)
         return {
             'model_config': model,

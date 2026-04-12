@@ -22,9 +22,9 @@ echo "=== VectorDBs ==="
 # done
 
 echo "=== Observability ==="
-# docker compose -f "$DIR/Observability/Prometheus/docker-compose.yml" up -d
-# docker compose -f "$DIR/Observability/Grafana/docker-compose.yml" up -d
-# docker compose -f "$DIR/Observability/Kibana/docker-compose.yml" up -d
+docker compose -f "$DIR/Observability/Prometheus/docker-compose.yml" up -d
+docker compose -f "$DIR/Observability/Grafana/docker-compose.yml" up -d
+# docker compose -f "$DIR/Observability/Kibana/docker-compose.yml" up -d  # Heavy (~800MB) — uncomment when needed
 
 echo "=== Airflow ==="
 # docker compose -f "$DIR/Airflow/docker-compose.yml" up -d

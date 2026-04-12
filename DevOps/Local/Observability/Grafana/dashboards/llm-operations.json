@@ -1,0 +1,95 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "title": "LLM Requests Total",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+      "targets": [{ "expr": "sum(llm_requests_total)", "refId": "A" }],
+      "fieldConfig": { "defaults": { "unit": "short" } }
+    },
+    {
+      "title": "Total Input Tokens",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
+      "targets": [{ "expr": "sum(llm_tokens_input_total)", "refId": "A" }],
+      "fieldConfig": { "defaults": { "unit": "short" } }
+    },
+    {
+      "title": "Total Output Tokens",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
+      "targets": [{ "expr": "sum(llm_tokens_output_total)", "refId": "A" }],
+      "fieldConfig": { "defaults": { "unit": "short" } }
+    },
+    {
+      "title": "Total Cost (USD)",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
+      "targets": [{ "expr": "sum(llm_cost_usd_total)", "refId": "A" }],
+      "fieldConfig": { "defaults": { "unit": "currencyUSD" } }
+    },
+    {
+      "title": "Requests by Model",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
+      "targets": [{ "expr": "sum by (model_id) (rate(llm_requests_total[5m]))", "legendFormat": "{{model_id}}", "refId": "A" }]
+    },
+    {
+      "title": "Tokens by Model (rate/min)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
+      "targets": [
+        { "expr": "sum by (model_id) (rate(llm_tokens_input_total[5m]))*60", "legendFormat": "{{model_id}} input", "refId": "A" },
+        { "expr": "sum by (model_id) (rate(llm_tokens_output_total[5m]))*60", "legendFormat": "{{model_id}} output", "refId": "B" }
+      ]
+    },
+    {
+      "title": "Latency p50 / p95 by Model",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 12 },
+      "targets": [
+        { "expr": "histogram_quantile(0.50, sum by (le, model_id) (rate(llm_latency_seconds_bucket[5m])))", "legendFormat": "{{model_id}} p50", "refId": "A" },
+        { "expr": "histogram_quantile(0.95, sum by (le, model_id) (rate(llm_latency_seconds_bucket[5m])))", "legendFormat": "{{model_id}} p95", "refId": "B" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s" } }
+    },
+    {
+      "title": "Cost by Model (cumulative)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 12 },
+      "targets": [{ "expr": "sum by (model_id) (llm_cost_usd_total)", "legendFormat": "{{model_id}}", "refId": "A" }],
+      "fieldConfig": { "defaults": { "unit": "currencyUSD" } }
+    },
+    {
+      "title": "Error Rate by Model",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 20 },
+      "targets": [{ "expr": "sum by (model_id) (rate(llm_requests_total{status='error'}[5m])) / sum by (model_id) (rate(llm_requests_total[5m]))", "legendFormat": "{{model_id}}", "refId": "A" }],
+      "fieldConfig": { "defaults": { "unit": "percentunit", "max": 1 } }
+    },
+    {
+      "title": "Briefing Pipeline Duration",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 20 },
+      "targets": [
+        { "expr": "histogram_quantile(0.50, sum by (le) (rate(briefing_duration_seconds_bucket[5m])))", "legendFormat": "p50", "refId": "A" },
+        { "expr": "histogram_quantile(0.95, sum by (le) (rate(briefing_duration_seconds_bucket[5m])))", "legendFormat": "p95", "refId": "B" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s" } }
+    }
+  ],
+  "schemaVersion": 39,
+  "tags": ["llm", "knowledge", "in-home-care"],
+  "templating": { "list": [] },
+  "time": { "from": "now-1h", "to": "now" },
+  "title": "LLM Operations",
+  "uid": "llm-operations",
+  "version": 1
+}
