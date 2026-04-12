@@ -1237,5 +1237,526 @@ populating the columns.
 
 ---
 
+---
+
+## 16. Admin Portal — Knowledge Base Menu & Repository Model
+
+### 16.1 Navigation hierarchy
+
+```
+Care Admin Portal (http://127.0.0.1:3002)
+│
+├── Dashboard
+├── Appointments
+├── Slack Claims
+├── Visits
+├── Members
+├── Staff
+├── Slack Integrations
+│
+└── Knowledge Base              ← NEW top-level nav
+    │
+    ├── Collections             (grid of cards, one per service type)
+    │   │
+    │   ├── Personal Care & Companionship
+    │   │   ├── Repositories    (list of repos inside this collection)
+    │   │   │   ├── Care Protocols v4        [status: indexed ✅]
+    │   │   │   ├── Hygiene Guidelines 2026  [status: locked 🔒]
+    │   │   │   ├── Staff Training Q2        [status: draft ✏️]
+    │   │   │   └── + Create repository
+    │   │   └── (collection settings: jurisdiction, description)
+    │   │
+    │   ├── Skilled Nursing
+    │   │   └── Repositories ...
+    │   │
+    │   ├── Physical Therapy
+    │   │   └── Repositories ...
+    │   │
+    │   └── Home Health Aide
+    │       └── Repositories ...
+    │
+    └── Indexing Status          (global view of all indexing jobs)
+        └── table: repo name, status, chunks indexed, last run, errors
+```
+
+### 16.2 Page-by-page UX
+
+#### Collections grid page (`/app/knowledge-base`)
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│  Knowledge Base                                    + New     │
+│  Collections auto-seeded from appointment service types.     │
+│                                                              │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐       │
+│  │ 🏥            │  │ 💊            │  │ 🏃            │       │
+│  │ Personal Care │  │ Skilled      │  │ Physical     │       │
+│  │ & Companion.  │  │ Nursing      │  │ Therapy      │       │
+│  │               │  │              │  │              │       │
+│  │ 4 repos       │  │ 2 repos      │  │ 1 repo       │       │
+│  │ 128 chunks    │  │ 56 chunks    │  │ 12 chunks    │       │
+│  │ US-CA, US-TX  │  │ US           │  │ US-CA        │       │
+│  └──────────────┘  └──────────────┘  └──────────────┘       │
+│                                                              │
+│  ┌──────────────┐                                            │
+│  │ 🏠            │                                            │
+│  │ Home Health   │                                            │
+│  │ Aide          │                                            │
+│  │               │                                            │
+│  │ 0 repos       │                                            │
+│  │ 0 chunks      │                                            │
+│  │ —             │                                            │
+│  └──────────────┘                                            │
+└──────────────────────────────────────────────────────────────┘
+```
+
+#### Repository list inside a collection (`/app/knowledge-base/:collectionSlug`)
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│  ← Back to Knowledge Base                                    │
+│  Personal Care & Companionship         + Create repository   │
+│  US-CA, US-TX  |  4 repositories  |  128 chunks indexed      │
+│                                                              │
+│  ┌────────────────────────────────────────────────────────┐  │
+│  │ Name                    │ Type     │ Items │ Status    │  │
+│  ├─────────────────────────┼──────────┼───────┼───────────┤  │
+│  │ Care Protocols v4       │ policies │   3   │ ✅ indexed │  │
+│  │ Hygiene Guidelines 2026 │ policies │   2   │ 🔒 locked  │  │
+│  │ Staff Training Q2       │ research │   5   │ ✏️ draft   │  │
+│  │ Field Notes — Apr 2026  │ exprnces │   8   │ ✅ indexed │  │
+│  └────────────────────────────────────────────────────────┘  │
+└──────────────────────────────────────────────────────────────┘
+```
+
+#### Repository detail page (`/app/knowledge-base/:collectionSlug/:repoId`)
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│  ← Back to Personal Care & Companionship                     │
+│  Care Protocols v4                                           │
+│  Type: policies  |  Status: ✅ indexed  |  128 chunks        │
+│  Jurisdictions: US, US-CA                                    │
+│                                                              │
+│  ┌───────────── Actions ──────────────┐                      │
+│  │  [Lock repository 🔒]             │  (only in draft)     │
+│  │  [Publish to indexing 🚀]         │  (only when locked)  │
+│  │  [Unlock ✏️]                      │  (only when locked)  │
+│  │  [Re-index 🔄]                    │  (only when indexed) │
+│  └────────────────────────────────────┘                      │
+│                                                              │
+│  ── Items ─────────────────────────── + Add item             │
+│                                                              │
+│  ┌────────────────────────────────────────────────────────┐  │
+│  │ Title                 │ Type          │ Size   │ Added │  │
+│  ├───────────────────────┼───────────────┼────────┼───────┤  │
+│  │ arrival_protocol.pdf  │ 📄 document   │ 240 KB │ Apr 8 │  │
+│  │ glove_guidelines.pdf  │ 📄 document   │ 180 KB │ Apr 9 │  │
+│  │ medication_checklist   │ 📝 note       │ —      │ Apr 10│  │
+│  └────────────────────────────────────────────────────────┘  │
+│                                                              │
+│  ── Source location ──────────────────────────────────────    │
+│  Local: ./knowledge_data/personal-care/care-protocols-v4/    │
+│  S3:    s3://ihcp-knowledge/personal-care/care-protocols-v4/ │
+│  (files in this folder are auto-discovered on publish)       │
+│                                                              │
+│  ── Indexing history ─────────────────────────────────────    │
+│  │ Run        │ Status  │ Chunks │ Duration │ Errors │       │
+│  │ Apr 10 3pm │ success │ 128    │ 12s      │ 0      │       │
+│  │ Apr 8 1pm  │ success │ 96     │ 9s       │ 0      │       │
+└──────────────────────────────────────────────────────────────┘
+```
+
+### 16.3 Repository item types
+
+Each repository has a primary *type* that describes the kind of
+knowledge it holds. Items within the repository can be mixed, but
+the type helps admins organize and helps the RAG retrieval rank
+results (a "policy" document may rank higher than an "experience"
+note for compliance-sensitive queries).
+
+| Type slug | Label | Icon | Description | Typical content |
+|---|---|---|---|---|
+| `announcements` | Announcements | 📢 | Time-sensitive policy updates, regulatory changes | "Starting May 1, all CA aides must complete 4h refresher training" |
+| `notes` | Notes | 📝 | Short-form clinical tips, Q&A from experienced staff | "For diabetic members, always check blood sugar before meal prep" |
+| `policies` | Policies | 📋 | SOPs, compliance documents, care protocols | "Infection Control SOP v4.2.pdf" |
+| `knowledgebases` | Knowledge Bases | 📚 | Structured reference material, FAQs, decision trees | "Wound care classification guide", "Fall risk assessment matrix" |
+| `research` | Research | 🔬 | Clinical studies, evidence-based guidelines, training materials | "CDC hand hygiene guidelines", "Best practices for dementia care" |
+| `experiences` | Experiences | 💡 | Field officer lessons learned, case studies, peer tips | "What I learned from 100 Personal Care visits" |
+| `others` | Others | 📎 | Anything that doesn't fit the above categories | Links, miscellaneous references |
+
+### 16.4 Repository lifecycle
+
+```
+  ┌──────┐     lock      ┌──────┐    publish     ┌──────────┐    Airflow    ┌─────────┐
+  │ DRAFT│ ──────────► │LOCKED│ ────────────► │PUBLISHING│ ──────────► │ INDEXED │
+  │  ✏️   │              │  🔒  │               │    🔄     │   success    │   ✅    │
+  └──────┘              └──────┘               └──────────┘              └─────────┘
+     ▲                     │                        │                         │
+     │        unlock       │                        │ failure                 │
+     └─────────────────────┘                        │                    re-index
+                                               ┌────▼────┐                   │
+                                               │  FAILED │                   │
+                                               │    ❌   │◄──────────────────┘
+                                               └─────────┘      (re-index after fixing)
+```
+
+**States explained:**
+
+| State | Editable? | What happens | Admin action |
+|---|---|---|---|
+| `draft` ✏️ | Yes — add/edit/remove items, change metadata | Nothing is indexed; the repo is work-in-progress | Lock when ready |
+| `locked` 🔒 | No — items and metadata are frozen | Ready for review / approval before publishing | Publish to indexing, or unlock to go back to draft |
+| `publishing` 🔄 | No | Kafka message sent, Airflow DAG is processing | Wait (status auto-updates via polling or webhook) |
+| `indexed` ✅ | No | All chunks are in the VectorDB, available to RAG queries | Re-index (triggers a fresh Airflow run), or unlock → draft to edit |
+| `failed` ❌ | No | Airflow DAG failed (OCR error, embedding API down, etc.) | Fix the issue, then re-index |
+
+**Why lock before publish?** Prevents the situation where an admin
+edits a document while Airflow is mid-indexing, which would create
+a race between the old and new content. Lock ensures the content is
+frozen for the duration of the indexing pipeline. Unlock after
+indexing to start the next edit cycle.
+
+### 16.5 Source locations — folder / S3
+
+Each repository has a **source path** that tells the indexing pipeline
+where to find the raw files. Two modes:
+
+| Mode | Path format | When to use |
+|---|---|---|
+| **Local folder** | `./knowledge_data/{collection-slug}/{repo-slug}/` | Local dev, small teams, quick iteration |
+| **S3 bucket** | `s3://{bucket}/{collection-slug}/{repo-slug}/` | Production, multi-machine, durable storage |
+
+**Auto-discovery**: when the admin clicks "Publish to indexing", the
+pipeline scans the source path for all files (PDFs, DOCXes, TXTs,
+Markdown, images) and processes each one. Files already indexed (by
+content hash, per LiveVectorLake's dedup strategy) are skipped.
+
+**Folder structure convention**:
+
+```
+knowledge_data/                                ← gitignored
+├── personal-care-companionship/
+│   ├── care-protocols-v4/
+│   │   ├── arrival_protocol.pdf
+│   │   ├── glove_guidelines.pdf
+│   │   └── medication_checklist.md
+│   └── hygiene-guidelines-2026/
+│       ├── hygiene_update_apr2026.pdf
+│       └── hand_washing_poster.png
+├── skilled-nursing/
+│   └── wound-care-protocols/
+│       └── wound_classification_guide.pdf
+└── ...
+```
+
+**S3 equivalent** (same structure, different root):
+
+```
+s3://ihcp-knowledge-prod/
+├── personal-care-companionship/
+│   ├── care-protocols-v4/
+│   │   └── ...
+│   └── ...
+└── ...
+```
+
+The source mode is configured per repository (or globally via env
+var `KNOWLEDGE_SOURCE_MODE=local|s3` with `KNOWLEDGE_S3_BUCKET` for
+the bucket name).
+
+### 16.6 Kafka → Airflow async indexing pipeline
+
+```
+Admin clicks "Publish to indexing"
+    │
+    ▼
+┌──────────────────────────────────────────────────────────────┐
+│ API Gateway                                                   │
+│ POST /api/admin/knowledge/repositories/{id}/publish           │
+│   1. Verify repo is in LOCKED state                           │
+│   2. Update status → PUBLISHING                               │
+│   3. Publish Kafka event:                                     │
+│      topic: knowledge.indexing                                │
+│      payload: {                                               │
+│        event_type: "repository.publish",                      │
+│        repository_id: 42,                                     │
+│        collection_id: 7,                                      │
+│        collection_slug: "personal-care-companionship",        │
+│        source_path: "./knowledge_data/personal-care/...",     │
+│        source_mode: "local",                                  │
+│        org_id: "platform",                                    │
+│        jurisdictions: ["US", "US-CA"],                        │
+│        occurred_at: "2026-04-11T..."                          │
+│      }                                                        │
+│   4. Return 202 Accepted                                      │
+└──────────────────────────────────────────────────────────────┘
+    │
+    │ Kafka topic: knowledge.indexing
+    ▼
+┌──────────────────────────────────────────────────────────────┐
+│ Apache Airflow                                                │
+│ DAG: knowledge_indexing_dag                                   │
+│ Trigger: KafkaConsumer sensor on knowledge.indexing            │
+│                                                               │
+│ Task 1: discover_files                                        │
+│   Scan source_path for all files                              │
+│   Output: list of file paths + mime types                     │
+│                                                               │
+│ Task 2: extract_text (parallel per file)                      │
+│   For each file:                                              │
+│     PDF/DOCX/image → call document_intelligence_svc OCR       │
+│     Markdown/TXT → read directly                              │
+│   Output: list of (file_path, extracted_text)                 │
+│                                                               │
+│ Task 3: chunk_and_hash                                        │
+│   For each extracted text:                                    │
+│     Recursive character splitter (512 tokens, 50 overlap)     │
+│     SHA-256 hash each chunk (LiveVectorLake dedup)            │
+│   Output: list of (chunk_text, content_hash, chunk_index)     │
+│                                                               │
+│ Task 4: dedup_and_embed                                       │
+│   For each chunk:                                             │
+│     Check content_hash against existing chunks in DB           │
+│     If hash exists AND valid_until IS NULL → skip (unchanged) │
+│     If hash is new → embed via OpenAI text-embedding-3-small  │
+│   For chunks that disappeared (old hash not in new set):      │
+│     UPDATE valid_until = now() (LiveVectorLake soft-delete)   │
+│   Output: list of (chunk_text, embedding, content_hash)       │
+│                                                               │
+│ Task 5: store_in_vectordb                                     │
+│   INSERT new chunks into collection_chunks                    │
+│   (with collection_id, item_id, content_hash, valid_from)     │
+│   Update repository: status → INDEXED, chunk_count = N        │
+│                                                               │
+│ Task 6: notify_completion                                     │
+│   Publish Kafka event:                                        │
+│     topic: knowledge.indexing                                 │
+│     payload: {                                                │
+│       event_type: "repository.indexed",                       │
+│       repository_id: 42,                                      │
+│       chunks_indexed: 128,                                    │
+│       chunks_skipped: 42,  (unchanged, deduped)               │
+│       chunks_expired: 3,   (old versions soft-deleted)        │
+│       duration_seconds: 12,                                   │
+│       status: "success" | "failed",                           │
+│       error: null | "embedding API returned 429"              │
+│     }                                                         │
+│                                                               │
+│ On failure at any task:                                        │
+│   Update repository status → FAILED                           │
+│   Publish failure event with error details                    │
+│   Airflow retries per task retry policy (3 retries, 60s wait) │
+└──────────────────────────────────────────────────────────────┘
+    │
+    │ Kafka topic: knowledge.indexing (completion event)
+    ▼
+┌──────────────────────────────────────────────────────────────┐
+│ knowledge_svc (or api_gateway)                                │
+│ Consumer: listens for repository.indexed / repository.failed  │
+│   → Updates repository status in DB                           │
+│   → Admin portal polls /repositories/{id} and sees the new    │
+│     status without a page refresh (or uses a WebSocket push)  │
+└──────────────────────────────────────────────────────────────┘
+```
+
+### 16.7 Why Airflow (not inline in knowledge_svc)
+
+| Concern | Inline (knowledge_svc) | Airflow |
+|---|---|---|
+| **Long-running** | Blocks the API thread; 50-page PDF OCR + embedding takes 30–60s | Async worker, API returns 202 immediately |
+| **Retries** | Hand-rolled retry logic | Built-in per-task retry policy with exponential backoff |
+| **Monitoring** | Custom logging | Airflow UI shows task status, duration, logs, gantt chart |
+| **Parallelism** | Single-threaded GIL | Airflow can fan-out `extract_text` across multiple workers |
+| **Scheduling** | Not possible | Future: nightly re-index DAG, scheduled S3 sync |
+| **Already in stack** | — | ✅ `DevOps/Local/Airflow/docker-compose.yml` already exists |
+
+### 16.8 Updated data model (replaces Section 9)
+
+```sql
+-- knowledge_schema (managed by knowledge_svc alembic)
+
+CREATE TABLE knowledge_schema.collections (
+    id              SERIAL PRIMARY KEY,
+    name            VARCHAR(255) NOT NULL,
+    slug            VARCHAR(255) NOT NULL UNIQUE,
+    service_type    VARCHAR(100),
+    description     TEXT,
+    icon_emoji      VARCHAR(10) DEFAULT '📚',
+    org_id          VARCHAR(100) NOT NULL DEFAULT 'platform',
+    jurisdiction    VARCHAR(20),
+    repo_count      INT DEFAULT 0,
+    total_chunks    INT DEFAULT 0,
+    created_at      TIMESTAMPTZ DEFAULT now(),
+    updated_at      TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE TABLE knowledge_schema.repositories (
+    id              SERIAL PRIMARY KEY,
+    collection_id   INT NOT NULL REFERENCES collections(id) ON DELETE CASCADE,
+    name            VARCHAR(255) NOT NULL,
+    slug            VARCHAR(255) NOT NULL,
+    repo_type       VARCHAR(30) NOT NULL DEFAULT 'others',
+    -- 'announcements','notes','policies','knowledgebases',
+    -- 'research','experiences','others'
+    status          VARCHAR(20) NOT NULL DEFAULT 'draft',
+    -- 'draft','locked','publishing','indexed','failed'
+    description     TEXT,
+    source_mode     VARCHAR(10) DEFAULT 'local',    -- 'local' | 's3'
+    source_path     VARCHAR(1024),
+    -- local: ./knowledge_data/{collection-slug}/{repo-slug}/
+    -- s3:    s3://bucket/{collection-slug}/{repo-slug}/
+    org_id          VARCHAR(100) NOT NULL DEFAULT 'platform',
+    jurisdictions   TEXT[],
+    item_count      INT DEFAULT 0,
+    chunk_count     INT DEFAULT 0,
+    last_indexed_at TIMESTAMPTZ,
+    last_error      TEXT,
+    created_by_user_id INT,
+    created_at      TIMESTAMPTZ DEFAULT now(),
+    updated_at      TIMESTAMPTZ DEFAULT now(),
+    UNIQUE(collection_id, slug)
+);
+
+CREATE TABLE knowledge_schema.repository_items (
+    id              SERIAL PRIMARY KEY,
+    repository_id   INT NOT NULL REFERENCES repositories(id) ON DELETE CASCADE,
+    collection_id   INT NOT NULL REFERENCES collections(id),
+    item_type       VARCHAR(20) NOT NULL,
+    -- 'document','announcement','link','note','image'
+    title           VARCHAR(255) NOT NULL,
+    content_text    TEXT,
+    source_url      VARCHAR(2048),
+    file_path       VARCHAR(512),
+    file_name       VARCHAR(255),
+    file_size_bytes BIGINT,
+    mime_type       VARCHAR(100),
+    chunk_count     INT DEFAULT 0,
+    org_id          VARCHAR(100) NOT NULL DEFAULT 'platform',
+    jurisdictions   TEXT[],
+    created_by_user_id INT,
+    created_at      TIMESTAMPTZ DEFAULT now(),
+    updated_at      TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE TABLE knowledge_schema.collection_chunks (
+    id              SERIAL PRIMARY KEY,
+    item_id         INT NOT NULL REFERENCES repository_items(id) ON DELETE CASCADE,
+    repository_id   INT NOT NULL REFERENCES repositories(id),
+    collection_id   INT NOT NULL REFERENCES collections(id),
+    chunk_index     INT NOT NULL,
+    chunk_text      TEXT NOT NULL,
+    embedding       VECTOR(1536),
+    content_hash    CHAR(64) NOT NULL,
+    valid_from      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    valid_until     TIMESTAMPTZ,
+    token_count     INT,
+    created_at      TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX ix_chunks_active_embedding
+    ON knowledge_schema.collection_chunks
+    USING ivfflat (embedding vector_cosine_ops)
+    WITH (lists = 100)
+    WHERE valid_until IS NULL;
+
+CREATE INDEX ix_chunks_content_hash
+    ON knowledge_schema.collection_chunks(content_hash);
+
+CREATE INDEX ix_chunks_collection
+    ON knowledge_schema.collection_chunks(collection_id)
+    WHERE valid_until IS NULL;
+
+CREATE TABLE knowledge_schema.indexing_runs (
+    id              SERIAL PRIMARY KEY,
+    repository_id   INT NOT NULL REFERENCES repositories(id),
+    status          VARCHAR(20) NOT NULL DEFAULT 'running',
+    -- 'running','success','failed'
+    chunks_indexed  INT DEFAULT 0,
+    chunks_skipped  INT DEFAULT 0,
+    chunks_expired  INT DEFAULT 0,
+    duration_seconds FLOAT,
+    error           TEXT,
+    airflow_dag_run_id VARCHAR(255),
+    started_at      TIMESTAMPTZ DEFAULT now(),
+    completed_at    TIMESTAMPTZ
+);
+```
+
+### 16.9 Airflow DAG sketch (Python)
+
+```python
+# dags/knowledge_indexing_dag.py
+
+from airflow import DAG
+from airflow.operators.python import PythonOperator
+from airflow.providers.apache.kafka.sensors.kafka import \
+    AwaitMessageTriggerEvent  # or a custom KafkaSensor
+from datetime import datetime, timedelta
+
+default_args = {
+    "owner": "knowledge_svc",
+    "retries": 3,
+    "retry_delay": timedelta(seconds=60),
+}
+
+with DAG(
+    "knowledge_indexing_dag",
+    default_args=default_args,
+    schedule_interval=None,  # triggered by Kafka, not on a cron
+    start_date=datetime(2026, 1, 1),
+    catchup=False,
+    tags=["knowledge", "indexing", "vectordb"],
+) as dag:
+
+    def discover_files(**ctx):
+        """Scan source_path for all processable files."""
+        ...
+
+    def extract_text(**ctx):
+        """OCR PDFs/images via document_intelligence_svc, read text files."""
+        ...
+
+    def chunk_and_hash(**ctx):
+        """Recursive character splitter + SHA-256 per chunk."""
+        ...
+
+    def dedup_and_embed(**ctx):
+        """Skip unchanged chunks (hash match), embed new ones via OpenAI."""
+        ...
+
+    def store_in_vectordb(**ctx):
+        """INSERT new chunks, soft-delete removed ones, update repo status."""
+        ...
+
+    def notify_completion(**ctx):
+        """Publish repository.indexed event to Kafka."""
+        ...
+
+    t1 = PythonOperator(task_id="discover_files", python_callable=discover_files)
+    t2 = PythonOperator(task_id="extract_text", python_callable=extract_text)
+    t3 = PythonOperator(task_id="chunk_and_hash", python_callable=chunk_and_hash)
+    t4 = PythonOperator(task_id="dedup_and_embed", python_callable=dedup_and_embed)
+    t5 = PythonOperator(task_id="store_in_vectordb", python_callable=store_in_vectordb)
+    t6 = PythonOperator(task_id="notify_completion", python_callable=notify_completion)
+
+    t1 >> t2 >> t3 >> t4 >> t5 >> t6
+```
+
+### 16.10 Updated phase plan (incorporating repositories + Airflow)
+
+| Phase | What ships | Scope |
+|---|---|---|
+| **Phase 1a** | Collections CRUD + admin grid page | Collections table + API + UI. Auto-seed from service types. |
+| **Phase 1b** | Repositories CRUD + admin list/detail pages | Repositories table + API + UI. Lifecycle: draft → locked. Item upload (files stored locally). |
+| **Phase 2a** | Airflow DAG: discover → extract → chunk → hash | Local Airflow stack uncommented in docker-all-up.sh. DAG triggered manually or via Kafka. Chunks stored in DB (no embedding yet). |
+| **Phase 2b** | Embedding + VectorDB indexing | pgvector extension enabled. Embedding via OpenAI API. Chunks with embeddings stored. Dedup via content hash. Temporal valid_from/valid_until. |
+| **Phase 2c** | RAG search API | `POST /knowledge/search` with collection scoping, jurisdiction filtering, temporal mode, query masking. |
+| **Phase 3** | LangGraph briefing agent + Slack auto-reply on Claim | `appointment.claimed` Kafka event → knowledge_agent_svc → RAG → LLM → Slack threaded reply. |
+| **Phase 4** | Interactive Slack Q&A in thread | Slack Events API `message.channels` → re-run RAG with user question → threaded LLM reply. |
+| **Phase 5** | S3 source mode + multi-tenant | S3 folder scanning, org_id scoping, per-customer portals. |
+
+---
+
 *This document is a living brainstorm. Mark decisions with ✅ as you
 make them, then tell Claude "build phase N" to start implementation.*
