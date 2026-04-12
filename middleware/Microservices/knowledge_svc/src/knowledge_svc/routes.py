@@ -220,6 +220,54 @@ def list_indexing_history(repo_id: int, page: int = 1, page_size: int = 20) -> d
     return _indexing_runs.list_runs(repo_id, page=page, page_size=page_size)
 
 
+@router.get('/indexing-runs/{run_id}')
+def get_indexing_run(run_id: int) -> dict[str, Any]:
+    from shared.storage import BaseStore
+    store = BaseStore('_')
+    if store.using_db:
+        row = store.fetch_one(
+            '''SELECT id, repository_id, vectordb_engine, status,
+                      chunks_indexed, chunks_skipped, chunks_expired,
+                      duration_seconds, error, started_at, completed_at
+               FROM knowledge_schema.indexing_runs WHERE id = %s''',
+            (run_id,),
+        )
+        if not row:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Indexing run not found.')
+        return row
+    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Not in memory mode.')
+
+
+@router.get('/repositories/{repo_id}/chunks')
+def list_chunks(repo_id: int, page: int = 1, page_size: int = 20) -> dict[str, Any]:
+    _repos.get_repository(repo_id)
+    from shared.storage import BaseStore
+    store = BaseStore('_')
+    if not store.using_db:
+        return {'items': [], 'page': 1, 'page_size': page_size, 'total': 0, 'total_pages': 1}
+    safe_page = max(1, page)
+    safe_size = max(1, min(page_size, 50))
+    total_row = store.fetch_one(
+        'SELECT COUNT(*) AS count FROM knowledge_schema.collection_chunks WHERE repository_id = %s AND valid_until IS NULL',
+        (repo_id,),
+    )
+    total = int(total_row['count']) if total_row else 0
+    items = store.fetch_all(
+        '''SELECT c.id, c.item_id, c.chunk_index, c.chunk_text,
+                  LEFT(c.content_hash, 12) AS content_hash_short,
+                  c.token_count, c.valid_from,
+                  i.title AS item_title, i.item_type
+           FROM knowledge_schema.collection_chunks c
+           LEFT JOIN knowledge_schema.repository_items i ON i.id = c.item_id
+           WHERE c.repository_id = %s AND c.valid_until IS NULL
+           ORDER BY c.item_id, c.chunk_index
+           LIMIT %s OFFSET %s''',
+        (repo_id, safe_size, (safe_page - 1) * safe_size),
+    )
+    total_pages = max(1, (total + safe_size - 1) // safe_size)
+    return {'items': items, 'page': safe_page, 'page_size': safe_size, 'total': total, 'total_pages': total_pages}
+
+
 # ----- Repository items -----
 
 @router.get('/repositories/{repo_id}/items')

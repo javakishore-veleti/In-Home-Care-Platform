@@ -109,6 +109,14 @@ def update_target_vectordbs(repo_id: int, payload: dict = Body(...)) -> dict[str
 def list_indexing_history(repo_id: int, page: int = 1, page_size: int = 20) -> dict[str, Any]:
     return _client.list_indexing_history(repo_id, page=page, page_size=page_size)
 
+@router.get('/indexing-runs/{run_id}')
+def get_indexing_run(run_id: int) -> dict[str, Any]:
+    return _client.get_indexing_run(run_id)
+
+@router.get('/repositories/{repo_id}/chunks')
+def list_chunks(repo_id: int, page: int = 1, page_size: int = 20) -> dict[str, Any]:
+    return _client.list_chunks(repo_id, page=page, page_size=page_size)
+
 @router.get('/supported-vectordbs')
 def list_supported_vectordbs() -> dict[str, Any]:
     return _client.list_supported_vectordbs()

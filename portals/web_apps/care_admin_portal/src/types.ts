@@ -172,6 +172,18 @@ export interface IndexingRun {
   completed_at?: string | null
 }
 
+export interface ChunkRow {
+  id: number
+  item_id: number
+  chunk_index: number
+  chunk_text: string
+  content_hash_short: string
+  token_count?: number | null
+  valid_from?: string | null
+  item_title?: string | null
+  item_type?: string | null
+}
+
 export interface KBItem {
   id: number
   repository_id: number

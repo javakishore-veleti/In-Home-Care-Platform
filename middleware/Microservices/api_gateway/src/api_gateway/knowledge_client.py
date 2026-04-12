@@ -112,6 +112,17 @@ class KnowledgeClient:
         _raise_for(resp)
         return resp.json()
 
+    def get_indexing_run(self, run_id: int) -> dict[str, Any]:
+        resp = self._client.get(f'/indexing-runs/{run_id}')
+        _raise_for(resp)
+        return resp.json()
+
+    def list_chunks(self, repo_id: int, page: int = 1, page_size: int = 20) -> dict[str, Any]:
+        resp = self._client.get(f'/repositories/{repo_id}/chunks',
+                                params={'page': page, 'page_size': page_size})
+        _raise_for(resp)
+        return resp.json()
+
     def list_supported_vectordbs(self) -> dict[str, Any]:
         resp = self._client.get('/supported-vectordbs')
         _raise_for(resp)

@@ -1,6 +1,7 @@
 import type {
   AppointmentRow,
   AuthSessionResponse,
+  ChunkRow,
   DashboardStats,
   IndexingRun,
   KBCollection,
@@ -149,6 +150,12 @@ export const api = {
   },
   listSupportedVectorDBs(token: string) {
     return request<{ items: VectorDBOption[] }>('/api/admin/knowledge/supported-vectordbs', {}, token)
+  },
+  getKBIndexingRun(token: string, runId: number) {
+    return request<IndexingRun>(`/api/admin/knowledge/indexing-runs/${runId}`, {}, token)
+  },
+  listKBChunks(token: string, repoId: number, params: URLSearchParams) {
+    return request<PaginatedResponse<ChunkRow>>(`/api/admin/knowledge/repositories/${repoId}/chunks?${params.toString()}`, {}, token)
   },
   listKBItems(token: string, repoId: number) {
     return request<{ items: KBItem[]; total: number }>(`/api/admin/knowledge/repositories/${repoId}/items`, {}, token)

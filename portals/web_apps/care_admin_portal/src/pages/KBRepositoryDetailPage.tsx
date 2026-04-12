@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 
 import { useAuth } from '../context/AuthContext'
 import { api } from '../lib/api'
@@ -15,6 +15,7 @@ const STATUS_COLORS: Record<string, string> = {
 
 export function KBRepositoryDetailPage() {
   const { token } = useAuth()
+  const navigate = useNavigate()
   const { collectionId, repoId } = useParams<{ collectionId: string; repoId: string }>()
   const [repo, setRepo] = useState<KBRepository | null>(null)
   const [items, setItems] = useState<KBItem[]>([])
@@ -346,7 +347,11 @@ export function KBRepositoryDetailPage() {
               </thead>
               <tbody>
                 {history.items.map(run => (
-                  <tr key={run.id} className="border-b border-[#0D7377]/10 text-sm">
+                  <tr
+                    key={run.id}
+                    onClick={() => navigate(`/app/knowledge-base/${collectionId}/repo/${repoId}/run/${run.id}`)}
+                    className="border-b border-[#0D7377]/10 text-sm cursor-pointer hover:bg-[#0D7377]/5"
+                  >
                     <td className="px-4 py-3 font-mono">#{run.id}</td>
                     <td className="px-4 py-3">
                       <span className="px-2 py-1 rounded bg-[#0D7377]/10 text-[#0D7377] text-xs font-semibold">

@@ -8,6 +8,7 @@ import { ClaimsPage } from './pages/ClaimsPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { KBCollectionDetailPage } from './pages/KBCollectionDetailPage'
 import { KBCollectionsPage } from './pages/KBCollectionsPage'
+import { KBIndexingRunDetailPage } from './pages/KBIndexingRunDetailPage'
 import { KBRepositoryDetailPage } from './pages/KBRepositoryDetailPage'
 import { MemberDetailPage } from './pages/MemberDetailPage'
 import { MembersPage } from './pages/MembersPage'
@@ -36,6 +37,7 @@ function App() {
           <Route path="/app/knowledge-base" element={<KBCollectionsPage />} />
           <Route path="/app/knowledge-base/:collectionId" element={<KBCollectionDetailPage />} />
           <Route path="/app/knowledge-base/:collectionId/repo/:repoId" element={<KBRepositoryDetailPage />} />
+          <Route path="/app/knowledge-base/:collectionId/repo/:repoId/run/:runId" element={<KBIndexingRunDetailPage />} />
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/app" replace />} />
