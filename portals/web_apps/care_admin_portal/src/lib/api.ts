@@ -163,6 +163,12 @@ export const api = {
     return request<void>(`/api/admin/knowledge/items/${itemId}`, { method: 'DELETE' }, token)
   },
   setupKBDefaults(token: string) {
-    return request<{ status: string }>('/api/admin/knowledge/setup-defaults', { method: 'POST' }, token)
+    return request<{ status: string; job?: Record<string, unknown> }>('/api/admin/knowledge/setup-defaults', { method: 'POST' }, token)
+  },
+  getKBSetupStatus(token: string) {
+    return request<{ job: Record<string, unknown> | null }>('/api/admin/knowledge/setup-defaults/status', {}, token)
+  },
+  resetKBSetup(token: string) {
+    return request<{ status: string }>('/api/admin/knowledge/setup-defaults/reset', { method: 'POST' }, token)
   },
 }

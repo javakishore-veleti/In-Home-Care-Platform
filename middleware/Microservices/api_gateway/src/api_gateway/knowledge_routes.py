@@ -125,3 +125,11 @@ def delete_item(item_id: int) -> None:
 @router.post('/setup-defaults', status_code=status.HTTP_202_ACCEPTED)
 def setup_defaults() -> dict[str, Any]:
     return _client.setup_defaults()
+
+@router.get('/setup-defaults/status')
+def setup_defaults_status() -> dict[str, Any]:
+    return _client.setup_defaults_status()
+
+@router.post('/setup-defaults/reset')
+def reset_setup_defaults() -> dict[str, Any]:
+    return _client.reset_setup_defaults()

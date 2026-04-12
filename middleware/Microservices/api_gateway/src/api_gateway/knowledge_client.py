@@ -128,3 +128,13 @@ class KnowledgeClient:
         resp = self._client.post('/setup-defaults')
         _raise_for(resp)
         return resp.json()
+
+    def setup_defaults_status(self) -> dict[str, Any]:
+        resp = self._client.get('/setup-defaults/status')
+        _raise_for(resp)
+        return resp.json()
+
+    def reset_setup_defaults(self) -> dict[str, Any]:
+        resp = self._client.post('/setup-defaults/reset')
+        _raise_for(resp)
+        return resp.json()

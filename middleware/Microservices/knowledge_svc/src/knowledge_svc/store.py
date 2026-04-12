@@ -22,6 +22,76 @@ def slugify(name: str) -> str:
 
 REPO_TYPES = {'announcements', 'notes', 'policies', 'knowledgebases', 'research', 'experiences', 'others'}
 ITEM_TYPES = {'document', 'announcement', 'link', 'note', 'image'}
+
+
+class SetupJobStore(BaseStore):
+    def __init__(self) -> None:
+        super().__init__('knowledge_setup_job')
+
+    def get_latest(self, job_type: str = 'setup_defaults') -> dict[str, Any] | None:
+        if self.using_db:
+            return self.fetch_one(
+                '''
+                SELECT id, job_type, status, repos_created, repos_skipped,
+                       items_created, error, triggered_by_user_id,
+                       started_at, completed_at
+                FROM knowledge_schema.setup_jobs
+                WHERE job_type = %s
+                ORDER BY id DESC LIMIT 1
+                ''',
+                (job_type,),
+            )
+        rows = [r for r in self.memory.list(self._memory_key('jobs')) if r.get('job_type') == job_type]
+        return max(rows, key=lambda r: r['id']) if rows else None
+
+    def create_run(self, job_type: str = 'setup_defaults', triggered_by: int | None = None) -> dict[str, Any]:
+        if self.using_db:
+            row = self.fetch_one(
+                '''
+                INSERT INTO knowledge_schema.setup_jobs
+                    (job_type, status, triggered_by_user_id, started_at)
+                VALUES (%s, 'running', %s, %s)
+                RETURNING id, job_type, status, repos_created, repos_skipped,
+                          items_created, error, triggered_by_user_id,
+                          started_at, completed_at
+                ''',
+                (job_type, triggered_by, now_utc()),
+            )
+            assert row is not None
+            return row
+        return self.memory.insert(self._memory_key('jobs'), {
+            'job_type': job_type, 'status': 'running',
+            'repos_created': 0, 'repos_skipped': 0, 'items_created': 0,
+            'error': None, 'triggered_by_user_id': triggered_by,
+            'started_at': now_utc(), 'completed_at': None,
+        })
+
+    def complete_run(self, job_id: int, *, repos_created: int, repos_skipped: int,
+                     items_created: int, error: str | None = None) -> dict[str, Any]:
+        status_val = 'failed' if error else 'completed'
+        if self.using_db:
+            self.execute(
+                '''
+                UPDATE knowledge_schema.setup_jobs SET
+                    status = %s, repos_created = %s, repos_skipped = %s,
+                    items_created = %s, error = %s, completed_at = %s
+                WHERE id = %s
+                ''',
+                (status_val, repos_created, repos_skipped, items_created, error, now_utc(), job_id),
+            )
+            return self.fetch_one('SELECT * FROM knowledge_schema.setup_jobs WHERE id = %s', (job_id,)) or {}
+        updated = self.memory.update(self._memory_key('jobs'), job_id, {
+            'status': status_val, 'repos_created': repos_created,
+            'repos_skipped': repos_skipped, 'items_created': items_created,
+            'error': error, 'completed_at': now_utc(),
+        })
+        return updated or {}
+
+    def reset(self, job_id: int) -> None:
+        if self.using_db:
+            self.execute('DELETE FROM knowledge_schema.setup_jobs WHERE id = %s', (job_id,))
+            return
+        self.memory.delete(self._memory_key('jobs'), job_id)
 VALID_TRANSITIONS = {
     'draft': {'locked'},
     'locked': {'draft', 'publishing'},

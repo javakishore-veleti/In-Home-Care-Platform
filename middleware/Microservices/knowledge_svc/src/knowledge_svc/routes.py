@@ -16,7 +16,7 @@ from typing import Any
 from fastapi import APIRouter, BackgroundTasks, Body, File, HTTPException, UploadFile, status
 from pydantic import BaseModel, Field
 
-from .store import CollectionStore, RepositoryItemStore, RepositoryStore
+from .store import CollectionStore, RepositoryItemStore, RepositoryStore, SetupJobStore
 
 log = logging.getLogger(__name__)
 
@@ -25,6 +25,7 @@ router = APIRouter(tags=['knowledge'])
 _collections = CollectionStore()
 _repos = RepositoryStore()
 _items = RepositoryItemStore()
+_setup_jobs = SetupJobStore()
 
 KNOWLEDGE_DATA_ROOT = os.getenv('KNOWLEDGE_DATA_ROOT', './knowledge_data')
 
@@ -220,80 +221,108 @@ DEFAULTS_JSON = os.getenv(
     str(Path(__file__).resolve().parent.parent.parent.parent.parent / 'DevOps' / 'Seeds' / 'collections-repositories-defaults.json'),
 )
 
-_setup_running = False
+def _run_setup_defaults(job_id: int) -> None:
+    """Background worker that reads the seed JSON and creates repos + items."""
+    repos_created = 0
+    repos_skipped = 0
+    items_created = 0
+    error_msg: str | None = None
 
-
-def _run_setup_defaults() -> dict[str, int]:
-    """Synchronous worker that reads the seed JSON and creates repos + items.
-
-    Idempotent: skips repos whose slug already exists in the collection.
-    Returns counts for logging.
-    """
-    global _setup_running
     try:
         with open(DEFAULTS_JSON) as f:
             data = json.load(f)
     except (FileNotFoundError, json.JSONDecodeError) as exc:
         log.error('setup_defaults.json_error path=%s error=%s', DEFAULTS_JSON, exc)
-        _setup_running = False
-        return {'error': str(exc)}
+        _setup_jobs.complete_run(job_id, repos_created=0, repos_skipped=0, items_created=0, error=str(exc))
+        return
 
-    repos_created = 0
-    items_created = 0
-    for col_spec in data.get('collections', []):
-        slug = col_spec.get('slug')
-        if not slug:
-            continue
-        collection = _collections.get_collection_by_slug(slug)
-        if not collection:
-            log.warning('setup_defaults.collection_not_found slug=%s', slug)
-            continue
-        collection_id = collection['id']
-        existing_repos = {r['slug'] for r in _repos.list_repositories(collection_id)}
-        for repo_spec in col_spec.get('repositories', []):
-            from .store import slugify
-            repo_slug = slugify(repo_spec.get('name', ''))
-            if repo_slug in existing_repos:
+    try:
+        for col_spec in data.get('collections', []):
+            slug = col_spec.get('slug')
+            if not slug:
                 continue
-            source_path = str(Path(KNOWLEDGE_DATA_ROOT) / slug / repo_slug)
-            repo = _repos.create_repository(
-                collection_id=collection_id,
-                name=repo_spec['name'],
-                repo_type=repo_spec.get('repo_type', 'others'),
-                description=repo_spec.get('description'),
-                source_mode='local',
-                source_path=source_path,
-            )
-            repos_created += 1
-            for item_spec in repo_spec.get('items', []):
-                _items.create_item(
-                    repository_id=repo['id'],
+            collection = _collections.get_collection_by_slug(slug)
+            if not collection:
+                log.warning('setup_defaults.collection_not_found slug=%s', slug)
+                continue
+            collection_id = collection['id']
+            existing_repos = {r['slug'] for r in _repos.list_repositories(collection_id)}
+            for repo_spec in col_spec.get('repositories', []):
+                from .store import slugify
+                repo_slug = slugify(repo_spec.get('name', ''))
+                if repo_slug in existing_repos:
+                    repos_skipped += 1
+                    continue
+                source_path = str(Path(KNOWLEDGE_DATA_ROOT) / slug / repo_slug)
+                repo = _repos.create_repository(
                     collection_id=collection_id,
-                    item_type=item_spec.get('item_type', 'note'),
-                    title=item_spec.get('title', 'Untitled'),
-                    content_text=item_spec.get('content_text'),
-                    source_url=item_spec.get('source_url'),
+                    name=repo_spec['name'],
+                    repo_type=repo_spec.get('repo_type', 'others'),
+                    description=repo_spec.get('description'),
+                    source_mode='local',
+                    source_path=source_path,
                 )
-                items_created += 1
-            Path(source_path).mkdir(parents=True, exist_ok=True)
-        _collections.refresh_counts(collection_id)
+                repos_created += 1
+                for item_spec in repo_spec.get('items', []):
+                    _items.create_item(
+                        repository_id=repo['id'],
+                        collection_id=collection_id,
+                        item_type=item_spec.get('item_type', 'note'),
+                        title=item_spec.get('title', 'Untitled'),
+                        content_text=item_spec.get('content_text'),
+                        source_url=item_spec.get('source_url'),
+                    )
+                    items_created += 1
+                Path(source_path).mkdir(parents=True, exist_ok=True)
+            _collections.refresh_counts(collection_id)
+    except Exception as exc:  # pragma: no cover
+        error_msg = str(exc)
+        log.exception('setup_defaults.error error=%s', exc)
 
-    log.info('setup_defaults.done repos_created=%d items_created=%d', repos_created, items_created)
-    _setup_running = False
-    return {'repos_created': repos_created, 'items_created': items_created}
+    _setup_jobs.complete_run(
+        job_id,
+        repos_created=repos_created,
+        repos_skipped=repos_skipped,
+        items_created=items_created,
+        error=error_msg,
+    )
+    log.info('setup_defaults.done repos_created=%d repos_skipped=%d items_created=%d', repos_created, repos_skipped, items_created)
 
 
 @router.post('/setup-defaults', status_code=status.HTTP_202_ACCEPTED)
 def setup_defaults(background_tasks: BackgroundTasks) -> dict[str, Any]:
     """Bulk-seed repositories and items from the defaults JSON.
 
-    Runs in the background so the API returns 202 immediately. The admin
-    portal can poll /collections to see the new repos appearing. Safe to
-    call multiple times — existing repos are skipped.
+    Creates a tracked job row so the admin UI can poll status and
+    show progress. Safe to call multiple times — existing repos are
+    skipped, and a running job blocks duplicate starts.
     """
-    global _setup_running
-    if _setup_running:
-        return {'status': 'already_running'}
-    _setup_running = True
-    background_tasks.add_task(_run_setup_defaults)
-    return {'status': 'started', 'defaults_json': DEFAULTS_JSON}
+    latest = _setup_jobs.get_latest()
+    if latest and latest.get('status') == 'running':
+        return {'status': 'already_running', 'job': latest}
+    job = _setup_jobs.create_run()
+    background_tasks.add_task(_run_setup_defaults, job['id'])
+    return {'status': 'started', 'job': job}
+
+
+@router.get('/setup-defaults/status')
+def setup_defaults_status() -> dict[str, Any]:
+    """Return the latest setup-defaults job for the admin status card."""
+    latest = _setup_jobs.get_latest()
+    return {'job': latest}
+
+
+@router.post('/setup-defaults/reset')
+def reset_setup_defaults() -> dict[str, Any]:
+    """Delete the latest job record so setup-defaults can be re-run.
+
+    Only allowed when the job is NOT currently running.
+    """
+    latest = _setup_jobs.get_latest()
+    if not latest:
+        return {'status': 'nothing_to_reset'}
+    if latest.get('status') == 'running':
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT,
+                            detail='Cannot reset while the job is still running.')
+    _setup_jobs.reset(latest['id'])
+    return {'status': 'reset_done'}
