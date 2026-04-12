@@ -128,6 +128,11 @@ class KnowledgeClient:
         _raise_for(resp)
         return resp.json()
 
+    def search(self, payload: dict[str, Any]) -> dict[str, Any]:
+        resp = self._client.post('/search', json=payload, timeout=30)
+        _raise_for(resp)
+        return resp.json()
+
     # ----- Items -----
 
     def list_items(self, repo_id: int) -> dict[str, Any]:

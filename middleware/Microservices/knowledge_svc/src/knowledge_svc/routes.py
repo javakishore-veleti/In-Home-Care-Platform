@@ -60,11 +60,37 @@ class ItemCreate(BaseModel):
     content_text: str | None = None
     source_url: str | None = None
 
+class SearchRequest(BaseModel):
+    query: str = Field(min_length=1)
+    collection_id: int | None = None
+    collection_slug: str | None = None
+    top_k: int = Field(default=10, ge=1, le=50)
+    strategy_filter: str | None = None
+
 class TargetVectorDBsUpdate(BaseModel):
     target_vectordbs: list[str]
 
 
 # ----- System config -----
+
+@router.post('/search')
+def search_knowledge(payload: SearchRequest = Body(...)) -> dict[str, Any]:
+    """Semantic search across all chunk strategies in pgvector.
+
+    Returns de-duplicated, ranked chunks with source metadata.
+    Accepts collection_id or collection_slug (or neither for global search).
+    Optional strategy_filter narrows to one strategy (sentence, recursive, etc.).
+    """
+    from .search import search
+    results = search(
+        collection_id=payload.collection_id,
+        collection_slug=payload.collection_slug,
+        query=payload.query,
+        top_k=payload.top_k,
+        strategy_filter=payload.strategy_filter,
+    )
+    return {'query': payload.query, 'results': results, 'total': len(results)}
+
 
 @router.get('/supported-vectordbs')
 def list_supported_vectordbs() -> dict[str, Any]:

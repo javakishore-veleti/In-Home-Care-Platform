@@ -121,6 +121,10 @@ def list_chunks(repo_id: int, page: int = 1, page_size: int = 20) -> dict[str, A
 def list_supported_vectordbs() -> dict[str, Any]:
     return _client.list_supported_vectordbs()
 
+@router.post('/search')
+def search_knowledge(payload: dict = Body(...)) -> dict[str, Any]:
+    return _client.search(payload)
+
 
 # ----- Items -----
 

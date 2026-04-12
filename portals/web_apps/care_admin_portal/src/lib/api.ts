@@ -151,6 +151,19 @@ export const api = {
   listSupportedVectorDBs(token: string) {
     return request<{ items: VectorDBOption[] }>('/api/admin/knowledge/supported-vectordbs', {}, token)
   },
+  searchKnowledge(token: string, payload: {
+    query: string
+    collection_id?: number
+    collection_slug?: string
+    top_k?: number
+    strategy_filter?: string
+  }) {
+    return request<{ query: string; results: ChunkRow[]; total: number }>(
+      '/api/admin/knowledge/search',
+      { method: 'POST', body: JSON.stringify(payload) },
+      token,
+    )
+  },
   getKBIndexingRun(token: string, runId: number) {
     return request<IndexingRun>(`/api/admin/knowledge/indexing-runs/${runId}`, {}, token)
   },

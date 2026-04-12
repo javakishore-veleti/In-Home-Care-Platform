@@ -13,9 +13,10 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Body, Depends
 
 from .dependencies import get_slack_integration_store
+from .knowledge_client import KnowledgeClient
 
 router = APIRouter(prefix='/api/internal', tags=['internal'])
 
@@ -33,3 +34,16 @@ def lookup_slack_integration(
     """
     integrations = slack_integration_store.list_enabled_for_event(event_type)
     return {'integrations': integrations}
+
+
+_knowledge_client = KnowledgeClient()
+
+
+@router.post('/knowledge/search')
+def internal_knowledge_search(payload: dict = Body(...)) -> dict[str, Any]:
+    """Unauthenticated search endpoint for knowledge_agent_svc (Phase 3).
+
+    Same as /api/admin/knowledge/search but without JWT gating so
+    the LangGraph agent can call it from a background Kafka consumer.
+    """
+    return _knowledge_client.search(payload)
