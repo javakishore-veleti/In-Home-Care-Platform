@@ -185,6 +185,27 @@ export interface ChunkRow {
   item_type?: string | null
 }
 
+export interface LLMResponse {
+  id: number
+  appointment_id: number
+  model_id: string
+  provider: string
+  display_name?: string | null
+  response_text: string
+  input_tokens: number
+  output_tokens: number
+  total_tokens: number
+  input_cost_usd: number
+  output_cost_usd: number
+  total_cost_usd: number
+  latency_ms?: number | null
+  is_primary: boolean
+  rating?: number | null
+  rating_comment?: string | null
+  service_type?: string | null
+  created_at?: string | null
+}
+
 export interface KBItem {
   id: number
   repository_id: number

@@ -7,6 +7,7 @@ import type {
   KBCollection,
   KBItem,
   KBRepository,
+  LLMResponse,
   MemberRow,
   PaginatedResponse,
   SlackChannelsResponse,
@@ -169,6 +170,15 @@ export const api = {
   },
   listKBChunks(token: string, repoId: number, params: URLSearchParams) {
     return request<PaginatedResponse<ChunkRow>>(`/api/admin/knowledge/repositories/${repoId}/chunks?${params.toString()}`, {}, token)
+  },
+  listLLMResponses(token: string, appointmentId: number) {
+    return request<PaginatedResponse<LLMResponse>>(`/api/admin/knowledge/llm-responses/${appointmentId}`, {}, token)
+  },
+  rateLLMResponse(token: string, responseId: number, rating: number, comment?: string) {
+    return request<LLMResponse>(`/api/admin/knowledge/llm-responses/${responseId}/rating`, {
+      method: 'PATCH',
+      body: JSON.stringify({ rating, rating_comment: comment }),
+    }, token)
   },
   listKBItems(token: string, repoId: number) {
     return request<{ items: KBItem[]; total: number }>(`/api/admin/knowledge/repositories/${repoId}/items`, {}, token)

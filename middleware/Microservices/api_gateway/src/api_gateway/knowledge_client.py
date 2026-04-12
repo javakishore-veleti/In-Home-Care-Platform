@@ -157,6 +157,16 @@ class KnowledgeClient:
         resp = self._client.delete(f'/items/{item_id}')
         _raise_for(resp)
 
+    def list_llm_responses(self, appointment_id: int, page: int = 1, page_size: int = 20) -> dict[str, Any]:
+        resp = self._client.get(f'/llm-responses/{appointment_id}', params={'page': page, 'page_size': page_size})
+        _raise_for(resp)
+        return resp.json()
+
+    def rate_llm_response(self, response_id: int, payload: dict[str, Any]) -> dict[str, Any]:
+        resp = self._client.patch(f'/llm-responses/{response_id}/rating', json=payload)
+        _raise_for(resp)
+        return resp.json()
+
     def setup_defaults(self) -> dict[str, Any]:
         resp = self._client.post('/setup-defaults')
         _raise_for(resp)

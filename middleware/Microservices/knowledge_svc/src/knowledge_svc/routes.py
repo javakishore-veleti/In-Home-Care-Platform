@@ -70,6 +70,58 @@ class SearchRequest(BaseModel):
 class TargetVectorDBsUpdate(BaseModel):
     target_vectordbs: list[str]
 
+class RatingUpdate(BaseModel):
+    rating: int = Field(ge=1, le=5)
+    rating_comment: str | None = None
+
+
+# ----- LLM Responses per appointment -----
+
+@router.get('/llm-responses/{appointment_id}')
+def list_llm_responses(appointment_id: int, page: int = 1, page_size: int = 20) -> dict[str, Any]:
+    from shared.storage import BaseStore
+    store = BaseStore('_')
+    if not store.using_db:
+        return {'items': [], 'page': 1, 'page_size': page_size, 'total': 0, 'total_pages': 1}
+    safe_page = max(1, page)
+    safe_size = max(1, min(page_size, 50))
+    total_row = store.fetch_one(
+        'SELECT COUNT(*) AS count FROM knowledge_schema.llm_responses WHERE appointment_id = %s',
+        (appointment_id,),
+    )
+    total = int(total_row['count']) if total_row else 0
+    items = store.fetch_all(
+        '''SELECT id, appointment_id, model_id, provider, display_name,
+                  response_text, finish_reason,
+                  input_tokens, output_tokens, total_tokens,
+                  input_cost_usd, output_cost_usd, total_cost_usd,
+                  latency_ms, is_primary, rating, rating_comment,
+                  service_type, collection_slug, created_at
+           FROM knowledge_schema.llm_responses
+           WHERE appointment_id = %s
+           ORDER BY is_primary DESC, latency_ms ASC
+           LIMIT %s OFFSET %s''',
+        (appointment_id, safe_size, (safe_page - 1) * safe_size),
+    )
+    total_pages = max(1, (total + safe_size - 1) // safe_size)
+    return {'items': items, 'page': safe_page, 'page_size': safe_size, 'total': total, 'total_pages': total_pages}
+
+
+@router.patch('/llm-responses/{response_id}/rating')
+def rate_llm_response(response_id: int, payload: RatingUpdate = Body(...)) -> dict[str, Any]:
+    from shared.storage import BaseStore
+    store = BaseStore('_')
+    if not store.using_db:
+        raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail='DB required')
+    store.execute(
+        'UPDATE knowledge_schema.llm_responses SET rating = %s, rating_comment = %s WHERE id = %s',
+        (payload.rating, payload.rating_comment, response_id),
+    )
+    row = store.fetch_one('SELECT * FROM knowledge_schema.llm_responses WHERE id = %s', (response_id,))
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Response not found.')
+    return row
+
 
 # ----- System config -----
 

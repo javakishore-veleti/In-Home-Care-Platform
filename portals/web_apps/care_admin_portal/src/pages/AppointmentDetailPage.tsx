@@ -4,12 +4,13 @@ import { useParams } from 'react-router-dom'
 import { DetailCard, DetailField, DetailLayout } from '../components/DetailLayout'
 import { useAuth } from '../context/AuthContext'
 import { api } from '../lib/api'
-import type { AppointmentRow, MemberRow } from '../types'
+import type { AppointmentRow, LLMResponse, MemberRow } from '../types'
 
 export function AppointmentDetailPage() {
   const { token } = useAuth()
   const { appointmentId } = useParams<{ appointmentId: string }>()
   const [appointment, setAppointment] = useState<AppointmentRow | null>(null)
+  const [llmResponses, setLlmResponses] = useState<LLMResponse[]>([])
   const [member, setMember] = useState<MemberRow | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -22,10 +23,16 @@ export function AppointmentDetailPage() {
         const appt = await api.getAppointment(token!, Number(appointmentId))
         if (cancelled) return
         setAppointment(appt)
-        // Best-effort member fetch — failures are non-fatal.
+        // Best-effort member fetch + LLM responses — failures are non-fatal.
         try {
           const m = await api.getMember(token!, appt.member_id)
           if (!cancelled) setMember(m)
+        } catch {
+          /* ignore */
+        }
+        try {
+          const llm = await api.listLLMResponses(token!, Number(appointmentId))
+          if (!cancelled) setLlmResponses(llm.items)
         } catch {
           /* ignore */
         }
@@ -51,6 +58,7 @@ export function AppointmentDetailPage() {
       error={error}
     >
       {appointment && (
+        <>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <DetailCard title="Request">
             <div className="grid grid-cols-2 gap-4">
@@ -114,6 +122,74 @@ export function AppointmentDetailPage() {
             </div>
           </DetailCard>
         </div>
+
+        {/* Knowledge Briefings — all LLM responses */}
+        {llmResponses.length > 0 && (
+          <div className="lg:col-span-2 space-y-4">
+            <h3 className="text-lg font-bold text-[#1A2B3C]">
+              Knowledge Briefings ({llmResponses.length} model{llmResponses.length !== 1 ? 's' : ''})
+            </h3>
+            {llmResponses.map((resp) => (
+              <div
+                key={resp.id}
+                className={`bg-white rounded-xl shadow border p-5 ${
+                  resp.is_primary ? 'border-[#0D7377] ring-2 ring-[#0D7377]/20' : 'border-[#0D7377]/10'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    {resp.is_primary && (
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold text-white uppercase bg-[#0D7377]">
+                        primary
+                      </span>
+                    )}
+                    <span className="font-semibold text-sm text-[#1A2B3C]">
+                      {resp.display_name ?? resp.model_id}
+                    </span>
+                    <span className="text-[10px] text-[#3D5A73]">{resp.provider}</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-[10px] text-[#3D5A73]">
+                    <span>{resp.input_tokens} in / {resp.output_tokens} out tokens</span>
+                    <span>${Number(resp.total_cost_usd).toFixed(4)}</span>
+                    <span>{resp.latency_ms ? `${(resp.latency_ms / 1000).toFixed(1)}s` : '—'}</span>
+                  </div>
+                </div>
+                <div className="text-sm text-[#1A2B3C] whitespace-pre-wrap leading-relaxed mb-3">
+                  {resp.response_text}
+                </div>
+                <div className="flex items-center gap-2 border-t border-[#0D7377]/10 pt-3">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      onClick={async () => {
+                        if (!token) return
+                        try {
+                          const updated = await api.rateLLMResponse(token, resp.id, star)
+                          setLlmResponses((prev) =>
+                            prev.map((r) => (r.id === resp.id ? { ...r, rating: updated.rating } : r)),
+                          )
+                        } catch { /* ignore */ }
+                      }}
+                      className={`text-lg ${
+                        resp.rating && star <= resp.rating ? 'text-[#E8A317]' : 'text-[#3D5A73]/30'
+                      } hover:text-[#E8A317] transition-colors`}
+                    >
+                      ★
+                    </button>
+                  ))}
+                  {resp.rating && (
+                    <span className="text-[10px] text-[#3D5A73] ml-2">{resp.rating}/5</span>
+                  )}
+                  <span className="text-[10px] text-[#3D5A73] ml-auto">
+                    {resp.created_at ? new Date(resp.created_at).toLocaleString() : ''}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        </>
       )}
     </DetailLayout>
   )

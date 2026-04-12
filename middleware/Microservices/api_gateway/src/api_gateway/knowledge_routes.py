@@ -126,6 +126,17 @@ def search_knowledge(payload: dict = Body(...)) -> dict[str, Any]:
     return _client.search(payload)
 
 
+# ----- LLM Responses -----
+
+@router.get('/llm-responses/{appointment_id}')
+def list_llm_responses(appointment_id: int, page: int = 1, page_size: int = 20) -> dict[str, Any]:
+    return _client.list_llm_responses(appointment_id, page=page, page_size=page_size)
+
+@router.patch('/llm-responses/{response_id}/rating')
+def rate_llm_response(response_id: int, payload: dict = Body(...)) -> dict[str, Any]:
+    return _client.rate_llm_response(response_id, payload)
+
+
 # ----- Items -----
 
 @router.get('/repositories/{repo_id}/items')
