@@ -1,0 +1,254 @@
+{
+  "description": "Default repositories and items seeded by the admin Knowledge Base 'Setup Defaults' button. Each collection maps 1:1 to an appointment service type. Repositories contain links to real public healthcare resources, sample announcements, and clinical notes.",
+  "collections": [
+    {
+      "slug": "personal-care-companionship",
+      "repositories": [
+        {
+          "name": "Hygiene & Infection Control",
+          "repo_type": "policies",
+          "description": "Hand hygiene, PPE, infection prevention protocols for personal care aides.",
+          "items": [
+            {"item_type": "link", "title": "CDC Hand Hygiene in Healthcare Settings", "source_url": "https://www.cdc.gov/hand-hygiene/hcp/index.html"},
+            {"item_type": "link", "title": "WHO Guidelines on Hand Hygiene in Health Care", "source_url": "https://www.who.int/publications/i/item/9789241597906"},
+            {"item_type": "note", "title": "Glove selection guide", "content_text": "Use nitrile gloves (not latex) for all personal care tasks. Check member file for latex allergy flag before each visit. Dispose after single use — never wash and reuse gloves."},
+            {"item_type": "announcement", "title": "Updated PPE policy effective May 2026", "content_text": "Effective May 1, 2026: all personal care aides must wear eye protection (face shield or goggles) during any task involving splash risk. Supplied in the field kit — request replacements via the mobile app."}
+          ]
+        },
+        {
+          "name": "Member Communication",
+          "repo_type": "experiences",
+          "description": "Tips for building rapport, handling difficult conversations, cultural sensitivity.",
+          "items": [
+            {"item_type": "note", "title": "Arrival routine — 5 steps", "content_text": "1. Knock and announce yourself by name. 2. Show ID badge. 3. Confirm the member's identity (name + DOB). 4. Ask how they're feeling today. 5. Review today's care plan together before starting."},
+            {"item_type": "note", "title": "Handling refusal of care", "content_text": "If a member refuses a task: (1) acknowledge their autonomy, (2) ask if they'd like to try later, (3) document the refusal in visit notes, (4) do NOT force any activity. Escalate to care coordinator if refusal is repeated across visits."},
+            {"item_type": "link", "title": "CMS Person-Centered Care Planning", "source_url": "https://www.cms.gov/Medicare/Quality-Initiatives-Patient-Assessment-Instruments/NursingHomeQualityInits"}
+          ]
+        },
+        {
+          "name": "Medication Reminders",
+          "repo_type": "policies",
+          "description": "Scope of practice for medication reminders (varies by state).",
+          "items": [
+            {"item_type": "note", "title": "What aides CAN and CANNOT do", "content_text": "Personal care aides may REMIND members to take medications but may NOT administer, measure, or dispense. If a member asks you to open a pill bottle, hand them the bottle — do not place pills in their hand. Document all reminders in visit notes."},
+            {"item_type": "announcement", "title": "California AB-1234 — expanded aide scope", "content_text": "Effective Jan 2026, California home health aides may assist with pre-measured, pre-packaged oral medications under a registered nurse's delegation. Training required — see your coordinator."},
+            {"item_type": "link", "title": "State-by-state scope of practice reference", "source_url": "https://www.phiinational.org/resources/scope-of-practice/"}
+          ]
+        },
+        {
+          "name": "Fall Prevention",
+          "repo_type": "knowledgebases",
+          "description": "Fall risk assessment, home safety checklists, post-fall protocols.",
+          "items": [
+            {"item_type": "link", "title": "CDC STEADI Fall Prevention Toolkit", "source_url": "https://www.cdc.gov/steadi/index.html"},
+            {"item_type": "note", "title": "Home safety walkthrough checklist", "content_text": "On first visit: check for loose rugs, poor lighting, cluttered walkways, grab bars in bathroom, non-slip mats in shower/tub. Document findings in visit notes — care coordinator will arrange fixes if needed."},
+            {"item_type": "note", "title": "Post-fall protocol", "content_text": "1. Do NOT move the member if injury is suspected. 2. Call 911 if unconscious, bleeding heavily, or unable to get up. 3. If member can stand safely, assist them to a chair. 4. Document the fall: time, location, activity, witnesses. 5. Call care coordinator immediately."}
+          ]
+        },
+        {
+          "name": "Q2 2026 Training Updates",
+          "repo_type": "research",
+          "description": "Quarterly training materials and continuing education requirements.",
+          "items": [
+            {"item_type": "announcement", "title": "Mandatory 4-hour refresher — due by June 30", "content_text": "All personal care aides must complete the Q2 refresher training by June 30, 2026. Topics: updated infection control, dementia care communication, fall prevention review. Schedule via the mobile app → Training tab."},
+            {"item_type": "link", "title": "Alzheimer's Association — Dementia Care Practice Recommendations", "source_url": "https://www.alz.org/professionals/professional-providers/dementia-care-practice-recommendations"},
+            {"item_type": "link", "title": "PHI National — Home Care Aide Training Resources", "source_url": "https://www.phiinational.org/resources/training/"}
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "skilled-nursing",
+      "repositories": [
+        {
+          "name": "Wound Care Protocols",
+          "repo_type": "policies",
+          "description": "Wound assessment, dressing changes, documentation standards.",
+          "items": [
+            {"item_type": "link", "title": "NPUAP/EPUAP Pressure Injury Staging Guide", "source_url": "https://npiap.com/page/PressureInjuryStages"},
+            {"item_type": "note", "title": "Wound documentation standard", "content_text": "Document: location (anatomical landmark), size (L×W×D in cm), stage (I-IV or unstageable), wound bed (granulation %, slough %, necrotic %), drainage (type, amount, odor), periwound skin condition. Use the PUSH tool score."},
+            {"item_type": "note", "title": "Dressing change frequency", "content_text": "Clean wounds: change every 48-72h or when soiled. Infected wounds: per physician order (typically daily). Always document the old dressing appearance before removing."}
+          ]
+        },
+        {
+          "name": "Medication Administration",
+          "repo_type": "policies",
+          "description": "The 6 Rights, high-alert medications, insulin protocols.",
+          "items": [
+            {"item_type": "note", "title": "The 6 Rights of Medication Administration", "content_text": "1. Right patient. 2. Right medication. 3. Right dose. 4. Right route. 5. Right time. 6. Right documentation. Verify all six BEFORE administering. If any doubt, call the prescribing physician."},
+            {"item_type": "link", "title": "ISMP High-Alert Medications in Community/Ambulatory Settings", "source_url": "https://www.ismp.org/recommendations/high-alert-medications-community-ambulatory-list"},
+            {"item_type": "announcement", "title": "Insulin pen safety reminder", "content_text": "NEVER share insulin pens between patients — even with a new needle. Each member must have their own pen. Report any suspected sharing to the care coordinator immediately."}
+          ]
+        },
+        {
+          "name": "Vital Signs & Assessment",
+          "repo_type": "knowledgebases",
+          "description": "Blood pressure, pulse, respiration, temperature — normal ranges and escalation.",
+          "items": [
+            {"item_type": "note", "title": "Adult vital sign normal ranges", "content_text": "BP: 90/60 to 120/80 mmHg. Pulse: 60-100 bpm. Respirations: 12-20/min. Temp: 97.8-99.1°F (36.5-37.3°C). O2 sat: ≥95%. Document and escalate any value outside these ranges."},
+            {"item_type": "note", "title": "When to call the physician", "content_text": "Call immediately if: BP >180/120 or <80/50, pulse >120 or <50, temp >101.5°F, O2 sat <90%, acute confusion or consciousness change, new-onset chest pain or difficulty breathing."},
+            {"item_type": "link", "title": "AHA Blood Pressure Categories", "source_url": "https://www.heart.org/en/health-topics/high-blood-pressure/understanding-blood-pressure-readings"}
+          ]
+        },
+        {
+          "name": "IV Therapy & Central Lines",
+          "repo_type": "policies",
+          "description": "PICC line care, IV medication infusion, complications.",
+          "items": [
+            {"item_type": "link", "title": "INS Infusion Therapy Standards of Practice", "source_url": "https://www.ins1.org/resources/ins-standards-of-practice/"},
+            {"item_type": "note", "title": "PICC dressing change protocol", "content_text": "Change PICC dressing every 7 days (transparent) or every 48h (gauze). Use chlorhexidine antiseptic. Document: insertion site appearance, catheter length external, dressing condition, patient tolerance."},
+            {"item_type": "note", "title": "Signs of line infection", "content_text": "Redness/warmth/swelling at insertion site, purulent drainage, fever >100.4°F, chills. If suspected: DO NOT remove the line — notify physician immediately for blood cultures and treatment."}
+          ]
+        },
+        {
+          "name": "Telehealth Integration",
+          "repo_type": "research",
+          "description": "Conducting virtual assessments, technology requirements, documentation.",
+          "items": [
+            {"item_type": "link", "title": "CMS Telehealth Services Overview", "source_url": "https://www.cms.gov/medicare/coverage/telehealth"},
+            {"item_type": "note", "title": "Pre-visit technology checklist", "content_text": "Before a telehealth visit: confirm internet connectivity, test video/audio, ensure member has a charged device, position camera for adequate lighting and visibility. Have emergency contact info ready in case of disconnection."}
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "physical-therapy",
+      "repositories": [
+        {
+          "name": "Exercise Programs",
+          "repo_type": "knowledgebases",
+          "description": "Standardized home exercise programs by condition.",
+          "items": [
+            {"item_type": "link", "title": "APTA Home Exercise Program Resources", "source_url": "https://www.apta.org/patient-care/interventions/home-exercise-program"},
+            {"item_type": "note", "title": "Hip replacement — weeks 1-6 HEP", "content_text": "Ankle pumps (20 reps, 3x/day), quad sets (10 reps, 3x/day), heel slides (10 reps, 2x/day), standing hip abduction (10 reps when weight-bearing allowed). NO hip flexion >90°, NO crossing legs, NO internal rotation."},
+            {"item_type": "note", "title": "Balance progression sequence", "content_text": "Level 1: tandem stance (30s). Level 2: single-leg stance (15s). Level 3: tandem walk (10 steps). Level 4: single-leg stance on foam. Progress only when member can complete current level without loss of balance."}
+          ]
+        },
+        {
+          "name": "Pain Assessment",
+          "repo_type": "policies",
+          "description": "Pain scales, documentation requirements, escalation criteria.",
+          "items": [
+            {"item_type": "note", "title": "Pain scale selection guide", "content_text": "Verbal patients: NRS (0-10 numeric rating scale). Non-verbal/cognitive impairment: FLACC (Face, Legs, Activity, Cry, Consolability) or Wong-Baker FACES. Document scale used and score at each visit — trend over time."},
+            {"item_type": "link", "title": "NIH Pain Consortium — Resources for Clinicians", "source_url": "https://painconsortium.nih.gov/resources-clinicians"}
+          ]
+        },
+        {
+          "name": "Assistive Device Training",
+          "repo_type": "experiences",
+          "description": "Walker, cane, wheelchair — fitting, training, safety.",
+          "items": [
+            {"item_type": "note", "title": "Walker fitting — the elbow test", "content_text": "Member stands inside the walker, arms at sides. Top of walker should align with the wrist crease. When gripping the handles, elbows should flex 15-20°. If too high: member leans forward (fall risk). If too low: shoulders elevate (fatigue/pain)."},
+            {"item_type": "note", "title": "Stair navigation with cane", "content_text": "Going UP: good leg first, then cane + affected leg. Going DOWN: cane + affected leg first, then good leg. Mnemonic: 'Up with the good, down with the bad.' Always use the handrail when available."}
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "home-health-aide",
+      "repositories": [
+        {
+          "name": "ADL Assistance",
+          "repo_type": "policies",
+          "description": "Bathing, dressing, grooming, toileting — safe techniques.",
+          "items": [
+            {"item_type": "note", "title": "Safe bathing sequence", "content_text": "1. Check water temp (100-105°F). 2. Gather supplies before starting. 3. Wash face first (no soap), then arms, trunk, legs, perineal area last. 4. Use non-slip mat in tub/shower. 5. Never leave member unattended in water."},
+            {"item_type": "link", "title": "CMS Home Health Aide Competency Requirements", "source_url": "https://www.cms.gov/regulations-and-guidance/legislation/cfr/index"},
+            {"item_type": "announcement", "title": "EVV compliance reminder — Q2 2026", "content_text": "All home health aide visits must have EVV (Electronic Visit Verification) check-in and check-out recorded via the mobile app. Missing EVV = denied claim. If the app fails, call the office within 1 hour to log a manual entry."}
+          ]
+        },
+        {
+          "name": "Nutrition & Meal Prep",
+          "repo_type": "knowledgebases",
+          "description": "Dietary restrictions, meal planning, food safety for home-bound members.",
+          "items": [
+            {"item_type": "note", "title": "Common dietary restrictions quick reference", "content_text": "Diabetic: limit sugars, count carbs (45-60g/meal). Renal: limit sodium (<2g/day), potassium, phosphorus. Cardiac: low sodium (<1.5g/day), low saturated fat. Dysphagia: texture-modified (pureed, minced, soft) — check speech therapy orders."},
+            {"item_type": "link", "title": "USDA MyPlate — Older Adults", "source_url": "https://www.myplate.gov/life-stages/older-adults"},
+            {"item_type": "note", "title": "Food safety — the 4 rules", "content_text": "1. CLEAN: wash hands + surfaces often. 2. SEPARATE: don't cross-contaminate. 3. COOK: to safe internal temps. 4. CHILL: refrigerate within 2 hours. For home-bound members: always check expiration dates in the fridge/pantry."}
+          ]
+        },
+        {
+          "name": "Documentation & Reporting",
+          "repo_type": "policies",
+          "description": "Visit notes, incident reporting, mandatory reporter obligations.",
+          "items": [
+            {"item_type": "note", "title": "Visit note essentials", "content_text": "Every visit note must include: arrival/departure time (EVV), tasks performed, member's condition/mood, any concerns or changes, vital signs if ordered, member's response to care. Use objective language — document what you SEE, not what you THINK."},
+            {"item_type": "note", "title": "Mandatory reporter obligations", "content_text": "Home health aides are MANDATORY REPORTERS of suspected abuse, neglect, or exploitation. Signs: unexplained injuries, fear of caregiver, poor hygiene, missing medications/funds. Report immediately to your supervisor AND your state's Adult Protective Services hotline. You are legally protected from retaliation."},
+            {"item_type": "link", "title": "National Adult Protective Services Association", "source_url": "https://www.napsa-now.org/"}
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "occupational-therapy",
+      "repositories": [
+        {
+          "name": "Home Modification Assessments",
+          "repo_type": "knowledgebases",
+          "description": "Environmental assessment, adaptive equipment recommendations.",
+          "items": [
+            {"item_type": "note", "title": "Kitchen safety assessment checklist", "content_text": "Check: stove knob guards, reachable storage (no overhead stretching), non-slip mats, adequate lighting, accessible fire extinguisher, easy-grip utensils available, microwave at counter height."},
+            {"item_type": "link", "title": "AOTA Home Modifications Resource", "source_url": "https://www.aota.org/practice/practice-essentials/home-modifications"}
+          ]
+        },
+        {
+          "name": "Cognitive Rehabilitation",
+          "repo_type": "research",
+          "description": "Memory aids, executive function strategies, dementia care techniques.",
+          "items": [
+            {"item_type": "note", "title": "Memory aid strategies", "content_text": "External aids: calendars, pill organizers, labeled drawers, written daily schedules, phone alarms. Internal aids: chunking (group related items), association (link new info to familiar), repetition (practice recall 3x). Start with external aids; add internal as cognition allows."},
+            {"item_type": "link", "title": "Alzheimer's Association — Activities for Dementia Care", "source_url": "https://www.alz.org/help-support/caregiving/daily-care/activities"}
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "speech-therapy",
+      "repositories": [
+        {
+          "name": "Dysphagia Management",
+          "repo_type": "policies",
+          "description": "Swallowing assessments, diet texture levels, aspiration precautions.",
+          "items": [
+            {"item_type": "link", "title": "IDDSI Framework — International Dysphagia Diet Standardisation", "source_url": "https://iddsi.org/framework/"},
+            {"item_type": "note", "title": "IDDSI levels quick reference", "content_text": "Level 0: Thin liquids. Level 1: Slightly thick. Level 2: Mildly thick. Level 3: Liquidised/moderately thick. Level 4: Pureed/extremely thick. Level 5: Minced & moist. Level 6: Soft & bite-sized. Level 7: Regular/easy to chew. Always match the member's prescribed level."},
+            {"item_type": "note", "title": "Aspiration precautions", "content_text": "Sit upright at 90° during meals and for 30 min after. Small bites, slow pace. No straws unless ordered. Alternate solids and liquids. Monitor for coughing, wet/gurgly voice, throat clearing during meals — signs of aspiration risk."}
+          ]
+        },
+        {
+          "name": "Aphasia Communication",
+          "repo_type": "experiences",
+          "description": "Communication strategies for members with aphasia after stroke.",
+          "items": [
+            {"item_type": "note", "title": "Talking to a member with aphasia", "content_text": "1. Speak slowly and use short sentences. 2. Give extra time for responses (count to 10 in your head). 3. Use yes/no questions when possible. 4. Offer visual choices (point to pictures). 5. Don't finish their sentences. 6. Reduce background noise. 7. Write key words if speech is difficult."},
+            {"item_type": "link", "title": "National Aphasia Association — Communication Tips", "source_url": "https://www.aphasia.org/aphasia-resources/communication-tips/"}
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "respite-care",
+      "repositories": [
+        {
+          "name": "Caregiver Transition Protocols",
+          "repo_type": "policies",
+          "description": "Handoff procedures, medication reconciliation, emergency contacts.",
+          "items": [
+            {"item_type": "note", "title": "Caregiver handoff checklist", "content_text": "At start of respite shift: 1. Review care plan with primary caregiver. 2. Confirm medication schedule and last doses given. 3. Note dietary restrictions and meal times. 4. Get emergency contact numbers. 5. Tour the home (exits, bathroom, bedroom). 6. Ask about member's current mood and any recent changes."},
+            {"item_type": "note", "title": "End-of-shift documentation", "content_text": "Before primary caregiver returns: document all activities, meals, medications reminded/administered, any incidents, member's mood throughout. Verbal handoff to caregiver: highlight anything unusual."},
+            {"item_type": "link", "title": "ARCH National Respite Network", "source_url": "https://archrespite.org/"}
+          ]
+        },
+        {
+          "name": "Activity Planning",
+          "repo_type": "experiences",
+          "description": "Engaging activities for members during respite visits.",
+          "items": [
+            {"item_type": "note", "title": "Low-energy activity ideas", "content_text": "Reading aloud, puzzles, card games, music listening (ask about preferences), looking through photo albums, gentle chair exercises, gardening (container plants on the porch), watching a favorite show together."},
+            {"item_type": "note", "title": "Activities for members with dementia", "content_text": "Sorting tasks (buttons, coins, cards by color), folding towels, wiping tables, watering plants, singing familiar songs, looking at family photos. Match complexity to current cognitive level. Success > challenge. If frustrated, redirect."}
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -162,4 +162,7 @@ export const api = {
   deleteKBItem(token: string, itemId: number) {
     return request<void>(`/api/admin/knowledge/items/${itemId}`, { method: 'DELETE' }, token)
   },
+  setupKBDefaults(token: string) {
+    return request<{ status: string }>('/api/admin/knowledge/setup-defaults', { method: 'POST' }, token)
+  },
 }

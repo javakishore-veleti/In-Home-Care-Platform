@@ -123,3 +123,8 @@ class KnowledgeClient:
     def delete_item(self, item_id: int) -> None:
         resp = self._client.delete(f'/items/{item_id}')
         _raise_for(resp)
+
+    def setup_defaults(self) -> dict[str, Any]:
+        resp = self._client.post('/setup-defaults')
+        _raise_for(resp)
+        return resp.json()

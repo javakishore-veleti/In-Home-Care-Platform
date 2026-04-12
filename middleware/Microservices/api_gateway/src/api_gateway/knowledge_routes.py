@@ -120,3 +120,8 @@ async def upload_item(repo_id: int, file: UploadFile = File(...)) -> dict[str, A
 @router.delete('/items/{item_id}', status_code=status.HTTP_204_NO_CONTENT)
 def delete_item(item_id: int) -> None:
     _client.delete_item(item_id)
+
+
+@router.post('/setup-defaults', status_code=status.HTTP_202_ACCEPTED)
+def setup_defaults() -> dict[str, Any]:
+    return _client.setup_defaults()

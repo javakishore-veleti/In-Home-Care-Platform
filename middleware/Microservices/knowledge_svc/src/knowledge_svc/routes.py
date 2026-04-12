@@ -6,13 +6,14 @@ to knowledge_svc ports (8010) is an internal-only path.
 """
 from __future__ import annotations
 
+import json
 import logging
 import os
 import shutil
 from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, Body, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, BackgroundTasks, Body, File, HTTPException, UploadFile, status
 from pydantic import BaseModel, Field
 
 from .store import CollectionStore, RepositoryItemStore, RepositoryStore
@@ -210,3 +211,89 @@ def delete_item(item_id: int) -> None:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT,
                             detail='Items can only be deleted from repositories in draft status.')
     _items.delete_item(item_id)
+
+
+# ----- Setup defaults (bulk seed from JSON) -----
+
+DEFAULTS_JSON = os.getenv(
+    'KNOWLEDGE_DEFAULTS_JSON',
+    str(Path(__file__).resolve().parent.parent.parent.parent.parent / 'DevOps' / 'Seeds' / 'collections-repositories-defaults.json'),
+)
+
+_setup_running = False
+
+
+def _run_setup_defaults() -> dict[str, int]:
+    """Synchronous worker that reads the seed JSON and creates repos + items.
+
+    Idempotent: skips repos whose slug already exists in the collection.
+    Returns counts for logging.
+    """
+    global _setup_running
+    try:
+        with open(DEFAULTS_JSON) as f:
+            data = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError) as exc:
+        log.error('setup_defaults.json_error path=%s error=%s', DEFAULTS_JSON, exc)
+        _setup_running = False
+        return {'error': str(exc)}
+
+    repos_created = 0
+    items_created = 0
+    for col_spec in data.get('collections', []):
+        slug = col_spec.get('slug')
+        if not slug:
+            continue
+        collection = _collections.get_collection_by_slug(slug)
+        if not collection:
+            log.warning('setup_defaults.collection_not_found slug=%s', slug)
+            continue
+        collection_id = collection['id']
+        existing_repos = {r['slug'] for r in _repos.list_repositories(collection_id)}
+        for repo_spec in col_spec.get('repositories', []):
+            from .store import slugify
+            repo_slug = slugify(repo_spec.get('name', ''))
+            if repo_slug in existing_repos:
+                continue
+            source_path = str(Path(KNOWLEDGE_DATA_ROOT) / slug / repo_slug)
+            repo = _repos.create_repository(
+                collection_id=collection_id,
+                name=repo_spec['name'],
+                repo_type=repo_spec.get('repo_type', 'others'),
+                description=repo_spec.get('description'),
+                source_mode='local',
+                source_path=source_path,
+            )
+            repos_created += 1
+            for item_spec in repo_spec.get('items', []):
+                _items.create_item(
+                    repository_id=repo['id'],
+                    collection_id=collection_id,
+                    item_type=item_spec.get('item_type', 'note'),
+                    title=item_spec.get('title', 'Untitled'),
+                    content_text=item_spec.get('content_text'),
+                    source_url=item_spec.get('source_url'),
+                )
+                items_created += 1
+            Path(source_path).mkdir(parents=True, exist_ok=True)
+        _collections.refresh_counts(collection_id)
+
+    log.info('setup_defaults.done repos_created=%d items_created=%d', repos_created, items_created)
+    _setup_running = False
+    return {'repos_created': repos_created, 'items_created': items_created}
+
+
+@router.post('/setup-defaults', status_code=status.HTTP_202_ACCEPTED)
+def setup_defaults(background_tasks: BackgroundTasks) -> dict[str, Any]:
+    """Bulk-seed repositories and items from the defaults JSON.
+
+    Runs in the background so the API returns 202 immediately. The admin
+    portal can poll /collections to see the new repos appearing. Safe to
+    call multiple times — existing repos are skipped.
+    """
+    global _setup_running
+    if _setup_running:
+        return {'status': 'already_running'}
+    _setup_running = True
+    background_tasks.add_task(_run_setup_defaults)
+    return {'status': 'started', 'defaults_json': DEFAULTS_JSON}
