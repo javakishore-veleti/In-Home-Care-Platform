@@ -154,11 +154,40 @@ def lock_repository(repo_id: int) -> dict[str, Any]:
 def unlock_repository(repo_id: int) -> dict[str, Any]:
     return _repos.transition_status(repo_id, 'draft')
 
+def _run_indexing_bg(repo_id: int, collection_id: int, targets: list[str]) -> None:
+    """Background worker: run the real pipeline for each engine."""
+    from .indexing import run_indexing_pipeline
+    any_failure = False
+    for engine in targets:
+        run = _indexing_runs.create_run(repo_id, engine)
+        try:
+            result = run_indexing_pipeline(
+                repository_id=repo_id, collection_id=collection_id,
+                vectordb_engine=engine, run_id=run['id'],
+            )
+            _indexing_runs.complete_run(
+                run['id'], status_val='success',
+                chunks_indexed=result.get('chunks_indexed', 0),
+                chunks_skipped=result.get('chunks_skipped', 0),
+                chunks_expired=result.get('chunks_expired', 0),
+                duration_seconds=result.get('duration_seconds', 0),
+            )
+        except Exception as exc:
+            log.exception('indexing.run_failed repo=%d engine=%s error=%s', repo_id, engine, exc)
+            _indexing_runs.complete_run(run['id'], status_val='failed', error=str(exc))
+            any_failure = True
+    try:
+        _repos.transition_status(repo_id, 'failed' if any_failure else 'indexed')
+    except Exception:
+        pass
+    try:
+        _collections.refresh_counts(_repos.get_repository(repo_id)['collection_id'])
+    except Exception:
+        pass
+
 @router.post('/repositories/{repo_id}/publish')
-def publish_repository(repo_id: int) -> dict[str, Any]:
-    """Create one indexing_run per selected vector DB, transition to
-    publishing → indexed. Phase 2 replaces the no-op with real
-    chunking + embedding."""
+def publish_repository(repo_id: int, background_tasks: BackgroundTasks) -> dict[str, Any]:
+    """Real indexing: chunks + embeds + stores in pgvector. Runs async."""
     repo = _repos.get_repository(repo_id)
     targets = repo.get('target_vectordbs') or ['pgvector']
     enabled_ids = {v['id'] for v in get_enabled_vectordbs() if v['enabled']}
@@ -166,15 +195,12 @@ def publish_repository(repo_id: int) -> dict[str, Any]:
     if not active_targets:
         active_targets = ['pgvector']
     repo = _repos.transition_status(repo_id, 'publishing')
-    for engine in active_targets:
-        run = _indexing_runs.create_run(repo_id, engine)
-        _indexing_runs.complete_run(run['id'], status_val='success', chunks_indexed=0)
-    repo = _repos.transition_status(repo_id, 'indexed')
-    log.info('repository.published repo_id=%d engines=%s', repo_id, active_targets)
+    background_tasks.add_task(_run_indexing_bg, repo_id, repo['collection_id'], active_targets)
+    log.info('repository.publish_started repo_id=%d engines=%s', repo_id, active_targets)
     return repo
 
 @router.post('/repositories/{repo_id}/reindex')
-def reindex_repository(repo_id: int) -> dict[str, Any]:
+def reindex_repository(repo_id: int, background_tasks: BackgroundTasks) -> dict[str, Any]:
     repo = _repos.get_repository(repo_id)
     targets = repo.get('target_vectordbs') or ['pgvector']
     enabled_ids = {v['id'] for v in get_enabled_vectordbs() if v['enabled']}
@@ -182,10 +208,7 @@ def reindex_repository(repo_id: int) -> dict[str, Any]:
     if not active_targets:
         active_targets = ['pgvector']
     repo = _repos.transition_status(repo_id, 'publishing')
-    for engine in active_targets:
-        run = _indexing_runs.create_run(repo_id, engine)
-        _indexing_runs.complete_run(run['id'], status_val='success', chunks_indexed=0)
-    repo = _repos.transition_status(repo_id, 'indexed')
+    background_tasks.add_task(_run_indexing_bg, repo_id, repo['collection_id'], active_targets)
     return repo
 
 
