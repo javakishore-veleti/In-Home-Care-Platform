@@ -100,6 +100,23 @@ class KnowledgeClient:
         _raise_for(resp)
         return resp.json()
 
+    def update_target_vectordbs(self, repo_id: int, target_vectordbs: list[str]) -> dict[str, Any]:
+        resp = self._client.patch(f'/repositories/{repo_id}/target-vectordbs',
+                                  json={'target_vectordbs': target_vectordbs})
+        _raise_for(resp)
+        return resp.json()
+
+    def list_indexing_history(self, repo_id: int, page: int = 1, page_size: int = 20) -> dict[str, Any]:
+        resp = self._client.get(f'/repositories/{repo_id}/indexing-history',
+                                params={'page': page, 'page_size': page_size})
+        _raise_for(resp)
+        return resp.json()
+
+    def list_supported_vectordbs(self) -> dict[str, Any]:
+        resp = self._client.get('/supported-vectordbs')
+        _raise_for(resp)
+        return resp.json()
+
     # ----- Items -----
 
     def list_items(self, repo_id: int) -> dict[str, Any]:

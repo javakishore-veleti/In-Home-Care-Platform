@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 
 import { useAuth } from '../context/AuthContext'
 import { api } from '../lib/api'
-import type { KBItem, KBRepository } from '../types'
+import type { IndexingRun, KBItem, KBRepository, PaginatedResponse, VectorDBOption } from '../types'
 
 const ITEM_TYPES = ['document', 'announcement', 'link', 'note']
 const ITEM_ICONS: Record<string, string> = {
@@ -24,6 +24,10 @@ export function KBRepositoryDetailPage() {
   const [busy, setBusy] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
+  const [vectordbs, setVectordbs] = useState<VectorDBOption[]>([])
+  const [history, setHistory] = useState<PaginatedResponse<IndexingRun> | null>(null)
+  const [historyPage, setHistoryPage] = useState(1)
+
   // New item form
   const [showForm, setShowForm] = useState(false)
   const [newType, setNewType] = useState('note')
@@ -35,21 +39,35 @@ export function KBRepositoryDetailPage() {
     if (!token || !repoId) return
     setLoading(true)
     try {
-      const [r, itemRes] = await Promise.all([
+      const [r, itemRes, vdbRes, histRes] = await Promise.all([
         api.getKBRepository(token, Number(repoId)),
         api.listKBItems(token, Number(repoId)),
+        api.listSupportedVectorDBs(token),
+        api.listKBIndexingHistory(token, Number(repoId), new URLSearchParams({ page: String(historyPage), page_size: '10' })),
       ])
       setRepo(r)
       setItems(itemRes.items)
+      setVectordbs(vdbRes.items)
+      setHistory(histRes)
       setError(null)
     } catch (exc) {
       setError(exc instanceof Error ? exc.message : 'Failed to load.')
     } finally {
       setLoading(false)
     }
-  }, [token, repoId])
+  }, [token, repoId, historyPage])
 
   useEffect(() => { void load() }, [load])
+
+  async function toggleVectorDB(vdbId: string, checked: boolean) {
+    if (!token || !repo) return
+    const current = repo.target_vectordbs ?? ['pgvector']
+    const updated = checked ? [...new Set([...current, vdbId])] : current.filter(v => v !== vdbId)
+    await doAction(
+      () => api.updateKBTargetVectorDBs(token!, repo!.id, updated),
+      `Vector DB targets updated.`,
+    )
+  }
 
   async function doAction(fn: () => Promise<unknown>, msg: string) {
     setBusy(true); setActionMsg(null)
@@ -168,6 +186,47 @@ export function KBRepositoryDetailPage() {
         </div>
       )}
 
+      {/* Vector DB targets */}
+      {repo && vectordbs.length > 0 && (
+        <div className="bg-white rounded-xl shadow border border-[#0D7377]/10 p-5">
+          <h3 className="text-sm font-bold text-[#1A2B3C] mb-3">Index Targets</h3>
+          <p className="text-[10px] text-[#3D5A73] mb-3">
+            Select which vector databases this repository should be indexed into when published.
+            Disabled options are not configured at the system level (set VECTORDB_&lt;ID&gt;_ENABLED=true in .env.local).
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+            {vectordbs.map(vdb => {
+              const checked = (repo.target_vectordbs ?? ['pgvector']).includes(vdb.id)
+              return (
+                <label
+                  key={vdb.id}
+                  className={`flex items-start gap-2 p-2 rounded border text-xs ${
+                    vdb.enabled
+                      ? 'border-[#0D7377]/20 hover:border-[#0D7377]/40 cursor-pointer'
+                      : 'border-gray-200 opacity-50 cursor-not-allowed'
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    disabled={!vdb.enabled || busy}
+                    onChange={(e) => toggleVectorDB(vdb.id, e.target.checked)}
+                    className="mt-0.5 accent-[#0D7377]"
+                  />
+                  <div>
+                    <div className="font-semibold text-[#1A2B3C]">{vdb.name}</div>
+                    <div className="text-[10px] text-[#3D5A73]">
+                      {vdb.description}
+                      {!vdb.enabled && ' (not enabled)'}
+                    </div>
+                  </div>
+                </label>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Items section */}
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-bold text-[#1A2B3C]">Items</h3>
@@ -265,6 +324,75 @@ export function KBRepositoryDetailPage() {
           </tbody>
         </table>
       )}
+
+      {/* Publishing History */}
+      <div>
+        <h3 className="text-lg font-bold text-[#1A2B3C] mt-6 mb-3">Publishing History</h3>
+        {history && history.items.length === 0 && (
+          <p className="text-sm text-[#3D5A73]">No indexing runs yet. Lock the repository and click Publish.</p>
+        )}
+        {history && history.items.length > 0 && (
+          <>
+            <table className="w-full text-left border-collapse bg-white rounded-xl shadow overflow-hidden">
+              <thead>
+                <tr className="bg-[#0D7377] text-white text-sm">
+                  <th className="px-4 py-3">Run</th>
+                  <th className="px-4 py-3">Vector DB</th>
+                  <th className="px-4 py-3">Status</th>
+                  <th className="px-4 py-3">Chunks</th>
+                  <th className="px-4 py-3">Duration</th>
+                  <th className="px-4 py-3">Started</th>
+                </tr>
+              </thead>
+              <tbody>
+                {history.items.map(run => (
+                  <tr key={run.id} className="border-b border-[#0D7377]/10 text-sm">
+                    <td className="px-4 py-3 font-mono">#{run.id}</td>
+                    <td className="px-4 py-3">
+                      <span className="px-2 py-1 rounded bg-[#0D7377]/10 text-[#0D7377] text-xs font-semibold">
+                        {run.vectordb_engine}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`px-2 py-1 rounded text-xs font-bold text-white uppercase ${
+                        run.status === 'success' ? 'bg-[#2D8A4E]' :
+                        run.status === 'running' ? 'bg-[#1976D2]' :
+                        run.status === 'failed' ? 'bg-[#D32F2F]' : 'bg-[#3D5A73]'
+                      }`}>
+                        {run.status}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-[#3D5A73]">
+                      {run.chunks_indexed} indexed / {run.chunks_skipped} skipped
+                    </td>
+                    <td className="px-4 py-3 text-[#3D5A73]">
+                      {run.duration_seconds ? `${run.duration_seconds.toFixed(1)}s` : '—'}
+                    </td>
+                    <td className="px-4 py-3 text-[#3D5A73] text-xs">
+                      {run.started_at ? new Date(run.started_at).toLocaleString() : '—'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {history.total_pages > 1 && (
+              <div className="flex items-center gap-3 text-sm mt-3">
+                <button type="button" disabled={historyPage <= 1}
+                  onClick={() => setHistoryPage(p => p - 1)}
+                  className="px-3 py-1.5 rounded bg-white border border-[#0D7377]/20 disabled:opacity-50">
+                  Previous
+                </button>
+                <span className="text-[#3D5A73]">Page {history.page} of {history.total_pages}</span>
+                <button type="button" disabled={historyPage >= history.total_pages}
+                  onClick={() => setHistoryPage(p => p + 1)}
+                  className="px-3 py-1.5 rounded bg-white border border-[#0D7377]/20 disabled:opacity-50">
+                  Next
+                </button>
+              </div>
+            )}
+          </>
+        )}
+      </div>
     </div>
   )
 }

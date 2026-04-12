@@ -101,6 +101,18 @@ def publish_repository(repo_id: int) -> dict[str, Any]:
 def reindex_repository(repo_id: int) -> dict[str, Any]:
     return _client.reindex_repository(repo_id)
 
+@router.patch('/repositories/{repo_id}/target-vectordbs')
+def update_target_vectordbs(repo_id: int, payload: dict = Body(...)) -> dict[str, Any]:
+    return _client.update_target_vectordbs(repo_id, payload.get('target_vectordbs', []))
+
+@router.get('/repositories/{repo_id}/indexing-history')
+def list_indexing_history(repo_id: int, page: int = 1, page_size: int = 20) -> dict[str, Any]:
+    return _client.list_indexing_history(repo_id, page=page, page_size=page_size)
+
+@router.get('/supported-vectordbs')
+def list_supported_vectordbs() -> dict[str, Any]:
+    return _client.list_supported_vectordbs()
+
 
 # ----- Items -----
 

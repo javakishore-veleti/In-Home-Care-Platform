@@ -2,6 +2,7 @@ import type {
   AppointmentRow,
   AuthSessionResponse,
   DashboardStats,
+  IndexingRun,
   KBCollection,
   KBItem,
   KBRepository,
@@ -11,6 +12,7 @@ import type {
   SlackIntegration,
   StaffRow,
   User,
+  VectorDBOption,
   VisitRow,
 } from '../types'
 
@@ -135,6 +137,18 @@ export const api = {
   },
   publishKBRepository(token: string, repoId: number) {
     return request<KBRepository>(`/api/admin/knowledge/repositories/${repoId}/publish`, { method: 'POST' }, token)
+  },
+  updateKBTargetVectorDBs(token: string, repoId: number, targets: string[]) {
+    return request<KBRepository>(`/api/admin/knowledge/repositories/${repoId}/target-vectordbs`, {
+      method: 'PATCH',
+      body: JSON.stringify({ target_vectordbs: targets }),
+    }, token)
+  },
+  listKBIndexingHistory(token: string, repoId: number, params: URLSearchParams) {
+    return request<PaginatedResponse<IndexingRun>>(`/api/admin/knowledge/repositories/${repoId}/indexing-history?${params.toString()}`, {}, token)
+  },
+  listSupportedVectorDBs(token: string) {
+    return request<{ items: VectorDBOption[] }>('/api/admin/knowledge/supported-vectordbs', {}, token)
   },
   listKBItems(token: string, repoId: number) {
     return request<{ items: KBItem[]; total: number }>(`/api/admin/knowledge/repositories/${repoId}/items`, {}, token)

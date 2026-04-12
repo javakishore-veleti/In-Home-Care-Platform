@@ -140,6 +140,7 @@ export interface KBRepository {
   source_path?: string | null
   org_id: string
   jurisdictions?: string[] | null
+  target_vectordbs?: string[] | null
   item_count: number
   chunk_count: number
   last_indexed_at?: string | null
@@ -147,6 +148,28 @@ export interface KBRepository {
   created_by_user_id?: number | null
   created_at?: string | null
   updated_at?: string | null
+}
+
+export interface VectorDBOption {
+  id: string
+  name: string
+  description: string
+  default: boolean
+  enabled: boolean
+}
+
+export interface IndexingRun {
+  id: number
+  repository_id: number
+  vectordb_engine: string
+  status: string
+  chunks_indexed: number
+  chunks_skipped: number
+  chunks_expired: number
+  duration_seconds?: number | null
+  error?: string | null
+  started_at?: string | null
+  completed_at?: string | null
 }
 
 export interface KBItem {

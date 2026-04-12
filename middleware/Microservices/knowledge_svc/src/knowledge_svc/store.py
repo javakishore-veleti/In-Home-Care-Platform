@@ -23,6 +23,17 @@ def slugify(name: str) -> str:
 REPO_TYPES = {'announcements', 'notes', 'policies', 'knowledgebases', 'research', 'experiences', 'others'}
 ITEM_TYPES = {'document', 'announcement', 'link', 'note', 'image'}
 
+SUPPORTED_VECTORDBS = [
+    {'id': 'pgvector', 'name': 'pgvector (Postgres)', 'description': 'Same Postgres — zero extra infra', 'default': True},
+    {'id': 'qdrant', 'name': 'Qdrant', 'description': 'Dedicated vector search engine with dashboard UI', 'default': False},
+    {'id': 'chroma', 'name': 'Chroma', 'description': 'Lightweight embedding database for prototyping', 'default': False},
+    {'id': 'weaviate', 'name': 'Weaviate', 'description': 'AI-native vector database with hybrid search', 'default': False},
+    {'id': 'milvus', 'name': 'Milvus', 'description': 'Cloud-native vector database for enterprise scale', 'default': False},
+    {'id': 'opensearch', 'name': 'AWS OpenSearch', 'description': 'Managed vector search on AWS (k-NN plugin)', 'default': False},
+    {'id': 'mongodb', 'name': 'MongoDB Atlas Vector Search', 'description': 'Vector search integrated into MongoDB Atlas', 'default': False},
+]
+VALID_VECTORDB_IDS = {v['id'] for v in SUPPORTED_VECTORDBS}
+
 
 class SetupJobStore(BaseStore):
     def __init__(self) -> None:
@@ -92,6 +103,104 @@ class SetupJobStore(BaseStore):
             self.execute('DELETE FROM knowledge_schema.setup_jobs WHERE id = %s', (job_id,))
             return
         self.memory.delete(self._memory_key('jobs'), job_id)
+
+
+def get_enabled_vectordbs() -> list[dict[str, Any]]:
+    """Return SUPPORTED_VECTORDBS with an ``enabled`` flag per env var."""
+    import os
+    result = []
+    for vdb in SUPPORTED_VECTORDBS:
+        env_key = f'VECTORDB_{vdb["id"].upper()}_ENABLED'
+        default = 'true' if vdb.get('default') else 'false'
+        enabled = os.getenv(env_key, default).lower() in ('1', 'true', 'yes')
+        result.append({**vdb, 'enabled': enabled})
+    return result
+
+
+class IndexingRunStore(BaseStore):
+    def __init__(self) -> None:
+        super().__init__('knowledge_indexing_run')
+
+    def list_runs(self, repository_id: int, *, page: int = 1, page_size: int = 20) -> dict[str, Any]:
+        safe_page = max(1, page)
+        safe_size = max(1, min(page_size, 100))
+        if self.using_db:
+            total_row = self.fetch_one(
+                'SELECT COUNT(*) AS count FROM knowledge_schema.indexing_runs WHERE repository_id = %s',
+                (repository_id,),
+            )
+            total = int(total_row['count']) if total_row else 0
+            items = self.fetch_all(
+                '''
+                SELECT id, repository_id, vectordb_engine, status,
+                       chunks_indexed, chunks_skipped, chunks_expired,
+                       duration_seconds, error, airflow_dag_run_id,
+                       started_at, completed_at
+                FROM knowledge_schema.indexing_runs
+                WHERE repository_id = %s
+                ORDER BY id DESC
+                LIMIT %s OFFSET %s
+                ''',
+                (repository_id, safe_size, (safe_page - 1) * safe_size),
+            )
+        else:
+            rows = sorted(
+                [r for r in self.memory.list(self._memory_key('runs')) if r.get('repository_id') == repository_id],
+                key=lambda r: r['id'], reverse=True,
+            )
+            total = len(rows)
+            start = (safe_page - 1) * safe_size
+            items = rows[start:start + safe_size]
+        total_pages = max(1, (total + safe_size - 1) // safe_size)
+        return {'items': items, 'page': safe_page, 'page_size': safe_size, 'total': total, 'total_pages': total_pages}
+
+    def create_run(self, repository_id: int, vectordb_engine: str) -> dict[str, Any]:
+        if self.using_db:
+            row = self.fetch_one(
+                '''
+                INSERT INTO knowledge_schema.indexing_runs
+                    (repository_id, vectordb_engine, status, started_at)
+                VALUES (%s, %s, 'running', %s)
+                RETURNING id, repository_id, vectordb_engine, status,
+                          chunks_indexed, chunks_skipped, chunks_expired,
+                          duration_seconds, error, started_at, completed_at
+                ''',
+                (repository_id, vectordb_engine, now_utc()),
+            )
+            assert row is not None
+            return row
+        return self.memory.insert(self._memory_key('runs'), {
+            'repository_id': repository_id, 'vectordb_engine': vectordb_engine,
+            'status': 'running', 'chunks_indexed': 0, 'chunks_skipped': 0,
+            'chunks_expired': 0, 'duration_seconds': None, 'error': None,
+            'started_at': now_utc(), 'completed_at': None,
+        })
+
+    def complete_run(self, run_id: int, *, status_val: str = 'success',
+                     chunks_indexed: int = 0, chunks_skipped: int = 0,
+                     chunks_expired: int = 0, duration_seconds: float = 0,
+                     error: str | None = None) -> None:
+        if self.using_db:
+            self.execute(
+                '''
+                UPDATE knowledge_schema.indexing_runs SET
+                    status = %s, chunks_indexed = %s, chunks_skipped = %s,
+                    chunks_expired = %s, duration_seconds = %s, error = %s,
+                    completed_at = %s
+                WHERE id = %s
+                ''',
+                (status_val, chunks_indexed, chunks_skipped, chunks_expired,
+                 duration_seconds, error, now_utc(), run_id),
+            )
+        else:
+            self.memory.update(self._memory_key('runs'), run_id, {
+                'status': status_val, 'chunks_indexed': chunks_indexed,
+                'chunks_skipped': chunks_skipped, 'chunks_expired': chunks_expired,
+                'duration_seconds': duration_seconds, 'error': error,
+                'completed_at': now_utc(),
+            })
+
+
 VALID_TRANSITIONS = {
     'draft': {'locked'},
     'locked': {'draft', 'publishing'},
@@ -231,6 +340,7 @@ class RepositoryStore(BaseStore):
                 '''
                 SELECT id, collection_id, name, slug, repo_type, status, description,
                        source_mode, source_path, org_id, jurisdictions,
+                       target_vectordbs,
                        item_count, chunk_count, last_indexed_at, last_error,
                        created_by_user_id, created_at, updated_at
                 FROM knowledge_schema.repositories
@@ -250,6 +360,7 @@ class RepositoryStore(BaseStore):
                 '''
                 SELECT id, collection_id, name, slug, repo_type, status, description,
                        source_mode, source_path, org_id, jurisdictions,
+                       target_vectordbs,
                        item_count, chunk_count, last_indexed_at, last_error,
                        created_by_user_id, created_at, updated_at
                 FROM knowledge_schema.repositories WHERE id = %s
