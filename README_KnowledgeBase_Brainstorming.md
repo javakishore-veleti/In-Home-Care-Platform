@@ -64,6 +64,17 @@
   - [17.8 Implementation Plan](#178-implementation-plan)
 - [18. Implementation Status](#18-implementation-status)
 - [19. Multi-LLM Fan-Out, Token Economics & Observability](#19-multi-llm-fan-out-token-economics--observability)
+  - [19.1–19.10 Design](#191-the-concept)
+  - [19.11 Airflow Fan-Out + Per-User Model Override](#1911-airflow-fan-out--per-user-model-override)
+- [20. LLM Observability — OpenTelemetry, Grafana, Kibana](#20-llm-observability--opentelemetry-grafana-kibana)
+  - [20.1 Why LLM Observability Is Different](#201-why-llm-observability-is-different-from-regular-apm)
+  - [20.2 The Three Observability Layers](#202-the-three-observability-layers)
+  - [20.3 Grafana Dashboards (4 dashboards)](#203-grafana-dashboards-for-llm-operations)
+  - [20.4 OpenTelemetry Integration Design](#204-opentelemetry-integration-design)
+  - [20.5 What to Track Per LLM Call](#205-what-to-track-per-llm-call-the-metrics-that-matter)
+  - [20.6 Kibana Saved Searches for Compliance](#206-kibana-saved-searches-for-compliance)
+  - [20.7 Docker Stack for Observability](#207-docker-stack-for-observability)
+  - [20.8 Implementation Phases](#208-implementation-phases)
   - [19.1 The Concept](#191-the-concept)
   - [19.2 Architecture](#192-architecture)
   - [19.3 Model Registry](#193-model-registry)
@@ -2553,6 +2564,339 @@ Field officers see a small dropdown on their **profile page** (or in
 the appointment detail) letting them pick their preferred model. The
 dropdown lists all enabled models with their display name and a cost
 indicator ($, $$, $$$, or "free" for local models).
+
+---
+
+---
+
+## 20. LLM Observability — OpenTelemetry, Grafana, Kibana
+
+### 20.1 Why LLM observability is different from regular APM
+
+Traditional observability tracks: is the service up? How fast is it?
+Are there errors? LLM observability adds three new dimensions:
+
+1. **Token economics** — every call costs money (or GPU time). You
+   need to see: how much are we spending per model, per service type,
+   per hour? Are any prompts inefficiently large?
+2. **Quality tracking** — an LLM can return a 200 OK with completely
+   wrong content. Latency and error rate alone can't tell you if the
+   briefing was *helpful*. Star ratings, hallucination markers, and
+   retrieval relevance scores are the quality signals.
+3. **Prompt/response audit** — healthcare compliance requires knowing
+   exactly what the AI told the field officer before a visit. Full
+   request/response logging with searchable fields.
+
+### 20.2 The three observability layers
+
+```
+┌─────────────────────────────────────────────────────┐
+│ Layer 1: TRACES (OpenTelemetry)                      │
+│ Distributed tracing across the full pipeline:        │
+│                                                     │
+│ Span: briefing.full_pipeline (parent)               │
+│   ├─ Span: appointment.fetch          (50ms)        │
+│   ├─ Span: rag.search                 (200ms)       │
+│   │   ├─ Span: embedding.encode       (30ms)        │
+│   │   └─ Span: pgvector.query         (15ms)        │
+│   ├─ Span: llm.call.ollama-llama3     (2100ms)      │
+│   ├─ Span: llm.call.ollama-qwen2.5   (1500ms)      │
+│   ├─ Span: llm.call.ollama-phi3      (2800ms)       │
+│   ├─ Span: llm.call.ollama-gemma2    (1200ms)       │
+│   ├─ Span: llm.store_responses       (20ms)         │
+│   └─ Span: slack.post_thread         (300ms)        │
+│                                                     │
+│ Each span carries:                                   │
+│   - model_id, provider, appointment_id               │
+│   - input_tokens, output_tokens, cost_usd            │
+│   - rag_chunks_used, similarity_scores               │
+│   - error (if any)                                   │
+│                                                     │
+│ Tool: OpenTelemetry SDK → Jaeger or Grafana Tempo    │
+└─────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────┐
+│ Layer 2: METRICS (Prometheus → Grafana)              │
+│ Aggregated counters, histograms, gauges:             │
+│                                                     │
+│ Counters:                                            │
+│   llm_requests_total{model,provider,status}          │
+│   llm_tokens_input_total{model,provider}             │
+│   llm_tokens_output_total{model,provider}            │
+│   llm_cost_usd_total{model,provider}                 │
+│   llm_ratings_total{model,rating}                    │
+│   rag_queries_total{collection,strategy}             │
+│                                                     │
+│ Histograms:                                          │
+│   llm_latency_seconds{model,provider}                │
+│   llm_tokens_per_request{model,direction}            │
+│   rag_similarity_score{collection}                   │
+│   rag_chunks_per_query{collection}                   │
+│                                                     │
+│ Gauges:                                              │
+│   llm_models_enabled_count                           │
+│   knowledge_chunks_active_total{collection}           │
+│   knowledge_repos_indexed_total                      │
+│                                                     │
+│ Tool: prometheus_client Python library → Prometheus  │
+│       scrape → Grafana dashboards                    │
+└─────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────┐
+│ Layer 3: LOGS (structured JSON → Kibana/ELK)         │
+│ Full request/response audit trail:                   │
+│                                                     │
+│ {                                                    │
+│   "timestamp": "2026-04-12T...",                     │
+│   "event": "llm.response",                          │
+│   "trace_id": "abc123...",                           │
+│   "appointment_id": 42,                              │
+│   "model_id": "ollama-llama3",                       │
+│   "provider": "ollama",                              │
+│   "service_type": "Personal Care",                   │
+│   "input_tokens": 1200,                              │
+│   "output_tokens": 350,                              │
+│   "cost_usd": 0.0,                                   │
+│   "latency_ms": 2100,                                │
+│   "rag_chunks_used": 5,                              │
+│   "rag_strategies": ["sentence","recursive"],        │
+│   "finish_reason": "stop",                           │
+│   "is_primary": true,                                │
+│   "system_prompt_hash": "a1b2c3...",                 │
+│   "response_preview": "Based on the knowledge..."   │
+│ }                                                    │
+│                                                     │
+│ Enables: full-text search on responses, filter by    │
+│ model, drill-down from Grafana to individual calls,  │
+│ compliance audit.                                    │
+│                                                     │
+│ Tool: structlog → Logstash/Filebeat → Elasticsearch  │
+│       → Kibana dashboards                            │
+└─────────────────────────────────────────────────────┘
+```
+
+### 20.3 Grafana dashboards for LLM operations
+
+**Dashboard 1: LLM Cost & Token Usage**
+
+Purpose: finance / budget monitoring. Answer: "How much are we
+spending on AI per day? Which model is most expensive?"
+
+```
+┌─────────────────────────────────────────────────────┐
+│  Total cost today: $2.47    Total tokens: 142K       │
+│                                                     │
+│  ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌────────┐│
+│  │ Llama3  │  │ Qwen2.5 │  │ GPT-4o  │  │ Gemini ││
+│  │ $0.00   │  │ $0.00   │  │ $1.82   │  │ $0.65  ││
+│  │ 45K tok │  │ 38K tok │  │ 42K tok │  │ 17K tok││
+│  └─────────┘  └─────────┘  └─────────┘  └────────┘│
+│                                                     │
+│  [stacked area: cost per hour by model]              │
+│  [stacked bar: tokens per hour by model]             │
+│  [table: top 10 most expensive appointments]         │
+│  [alert: cost > $X/hour threshold]                   │
+└─────────────────────────────────────────────────────┘
+```
+
+**Dashboard 2: LLM Performance & Reliability**
+
+Purpose: SRE / on-call. Answer: "Which model is slow? Any errors?
+Is Ollama keeping up?"
+
+```
+┌─────────────────────────────────────────────────────┐
+│  Requests/min: 12    Error rate: 0.8%    p50: 1.8s  │
+│                                                     │
+│  ┌──────────────────────────────────────────────┐    │
+│  │ Model        │ p50    │ p95    │ p99   │ Err │    │
+│  ├──────────────┼────────┼────────┼───────┼─────┤    │
+│  │ Gemma 2      │ 1.2s   │ 1.8s   │ 2.5s  │ 0%  │    │
+│  │ Qwen 2.5     │ 1.5s   │ 2.5s   │ 4.0s  │ 0%  │    │
+│  │ Llama 3      │ 2.1s   │ 3.5s   │ 5.0s  │ 1%  │    │
+│  │ GPT-4o       │ 0.8s   │ 1.2s   │ 1.8s  │ 0%  │    │
+│  └──────────────────────────────────────────────┘    │
+│                                                     │
+│  [heatmap: latency distribution over 24h]            │
+│  [line: error rate per model over time]              │
+│  [gauge: Ollama GPU memory usage if applicable]      │
+└─────────────────────────────────────────────────────┘
+```
+
+**Dashboard 3: RAG Quality & Knowledge Base Health**
+
+Purpose: knowledge base admin. Answer: "Is the RAG retrieval finding
+good chunks? Which collections need more content?"
+
+```
+┌─────────────────────────────────────────────────────┐
+│  Active chunks: 840    Collections: 7    Repos: 25   │
+│                                                     │
+│  [bar: chunks by strategy (sentence/recursive/       │
+│   semantic/parent_doc)]                              │
+│  [histogram: similarity scores — are matches good?]  │
+│  [table: collections by query count + avg score]     │
+│  [alert: collection with avg score < 0.5 = needs     │
+│   more content]                                      │
+│                                                     │
+│  Avg chunks per query: 5.2                           │
+│  Avg similarity score: 0.82                          │
+│  Queries with 0 results: 3% (which collections?)     │
+└─────────────────────────────────────────────────────┘
+```
+
+**Dashboard 4: LLM Quality & Feedback**
+
+Purpose: product / AI team. Answer: "Which model produces the best
+briefings? Are field officers happy?"
+
+```
+┌─────────────────────────────────────────────────────┐
+│  Avg rating: 3.8/5    Rated responses: 67%           │
+│                                                     │
+│  ┌──────────────────────────────────────────────┐    │
+│  │ Model        │ Avg ★  │ Count │ 5★  │ 1★    │    │
+│  ├──────────────┼────────┼───────┼─────┼───────┤    │
+│  │ GPT-4o       │ 4.2    │ 45    │ 22  │ 1     │    │
+│  │ Llama 3      │ 3.8    │ 120   │ 35  │ 8     │    │
+│  │ Qwen 2.5     │ 3.5    │ 98    │ 20  │ 12    │    │
+│  │ Gemma 2      │ 3.1    │ 85    │ 10  │ 18    │    │
+│  └──────────────────────────────────────────────┘    │
+│                                                     │
+│  [pie: rating distribution across all models]        │
+│  [line: avg rating trend per model per week]         │
+│  [table: lowest-rated responses for review]          │
+│  [bar: rating by service type — which types get      │
+│   worse briefings? → need better KB content]         │
+└─────────────────────────────────────────────────────┘
+```
+
+### 20.4 OpenTelemetry integration design
+
+**Where spans are created** (instrumented code points):
+
+| Service | Span name | Attributes |
+|---|---|---|
+| knowledge_agent_svc | `briefing.pipeline` | appointment_id, service_type |
+| knowledge_agent_svc | `briefing.rag_search` | collection_slug, top_k, chunks_returned |
+| knowledge_agent_svc | `briefing.llm_call` | model_id, provider, input_tokens, output_tokens, cost_usd |
+| knowledge_agent_svc | `briefing.store_response` | model_id, response_id |
+| knowledge_agent_svc | `briefing.slack_post` | channel_id, thread_ts, success |
+| knowledge_svc | `rag.search` | collection_id, query_masked, strategy_filter, results_count |
+| knowledge_svc | `rag.embed_query` | model, dimension, latency_ms |
+| knowledge_svc | `indexing.pipeline` | repository_id, engine, chunks_indexed |
+| knowledge_svc | `indexing.embed_batch` | count, model, latency_ms |
+
+**SDK setup** (one-time in each service's main.py):
+
+```python
+from opentelemetry import trace
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+
+provider = TracerProvider()
+provider.add_span_processor(BatchSpanProcessor(
+    OTLPSpanExporter(endpoint="http://localhost:4317")  # Grafana Tempo or Jaeger
+))
+trace.set_tracer_provider(provider)
+tracer = trace.get_tracer("knowledge_agent_svc")
+```
+
+**Usage in the briefing flow:**
+
+```python
+with tracer.start_as_current_span("briefing.pipeline") as span:
+    span.set_attribute("appointment_id", appointment_id)
+    span.set_attribute("service_type", service_type)
+
+    with tracer.start_as_current_span("briefing.rag_search"):
+        chunks = search(...)
+        span.set_attribute("chunks_returned", len(chunks))
+
+    with tracer.start_as_current_span("briefing.llm_call") as llm_span:
+        result = chat_completion(...)
+        llm_span.set_attribute("model_id", model_id)
+        llm_span.set_attribute("input_tokens", result["input_tokens"])
+        llm_span.set_attribute("cost_usd", cost)
+```
+
+### 20.5 What to track per LLM call (the metrics that matter)
+
+| Category | Metric | Why it matters |
+|---|---|---|
+| **Cost** | input_tokens × cost_per_1K | Budget control |
+| **Cost** | output_tokens × cost_per_1K | Budget control |
+| **Cost** | total_cost_usd per model per day | Executive reporting |
+| **Performance** | latency_ms (p50, p95, p99) | User experience — >5s feels broken |
+| **Performance** | tokens_per_second (output) | Model throughput comparison |
+| **Performance** | time_to_first_token | Perceived responsiveness |
+| **Reliability** | error_rate per model | Retry/fallback decisions |
+| **Reliability** | rate_limit_hits per provider | Capacity planning |
+| **Reliability** | timeout_count | Model health |
+| **Quality** | avg_rating per model | Which model to make primary |
+| **Quality** | rating_distribution (1-5) | Detect model degradation |
+| **Quality** | unrated_response_% | Feedback loop coverage |
+| **RAG** | avg_similarity_score | Are embeddings finding good matches? |
+| **RAG** | zero_result_queries | Which collections need content? |
+| **RAG** | chunks_per_query distribution | Are we over/under-retrieving? |
+| **RAG** | strategy_hit_distribution | Which chunking strategy wins most? |
+| **Audit** | full prompt + response text | Compliance reconstruction |
+| **Audit** | which chunks were cited | Traceability |
+
+### 20.6 Kibana saved searches for compliance
+
+Pre-built Kibana searches for healthcare audit:
+
+| Search name | Query | Purpose |
+|---|---|---|
+| "All briefings for appointment X" | `appointment_id: 42` | Reconstruct what the AI said before a visit |
+| "Failed LLM calls today" | `event: llm.response AND status: error AND @timestamp > now-24h` | Incident response |
+| "Briefings that cited outdated docs" | `rag_chunks_used > 0 AND response_text: *deprecated*` | Content freshness |
+| "Unrated responses" | `event: llm.response AND NOT rating: *` | Identify feedback gaps |
+| "High-cost calls" | `cost_usd > 0.05` | Cost outlier investigation |
+| "Slow responses" | `latency_ms > 5000` | Performance investigation |
+
+### 20.7 Docker stack for observability
+
+All containers already exist in the repo (DevOps/Local/Observability/):
+
+```
+DevOps/Local/Observability/
+├── Prometheus/docker-compose.yml    (metrics scrape + store)
+├── Grafana/docker-compose.yml       (dashboards)
+└── Kibana/docker-compose.yml        (log search)
+
+DevOps/Local/Observability/Tempo/     (NEW — distributed tracing)
+└── docker-compose.yml
+```
+
+Currently commented out in docker-all-up.sh. Uncomment when ready:
+
+```bash
+# In docker-all-up.sh, uncomment:
+docker compose -f "$DIR/Observability/Prometheus/docker-compose.yml" up -d
+docker compose -f "$DIR/Observability/Grafana/docker-compose.yml" up -d
+docker compose -f "$DIR/Observability/Kibana/docker-compose.yml" up -d
+docker compose -f "$DIR/Observability/Tempo/docker-compose.yml" up -d  # NEW
+```
+
+### 20.8 Implementation phases
+
+| Step | What | Effort |
+|---|---|---|
+| 1 | Add prometheus_client to knowledge_agent_svc, emit counters/histograms on every LLM call | 1 hour |
+| 2 | Prometheus scrape config for knowledge_agent_svc + knowledge_svc /metrics endpoints | 30 min |
+| 3 | Import Dashboard 1 (Cost & Tokens) JSON into Grafana | 30 min |
+| 4 | Import Dashboard 2 (Performance) JSON into Grafana | 30 min |
+| 5 | Import Dashboard 3 (RAG Quality) JSON into Grafana | 30 min |
+| 6 | Import Dashboard 4 (LLM Quality / Feedback) JSON into Grafana | 30 min |
+| 7 | Add structlog JSON formatter to knowledge_agent_svc | 30 min |
+| 8 | Filebeat/Logstash config to ship logs to Elasticsearch | 1 hour |
+| 9 | Import Kibana saved searches | 30 min |
+| 10 | OpenTelemetry spans in briefing pipeline | 2 hours |
+| 11 | Grafana Tempo docker-compose + trace-to-logs correlation | 1 hour |
+| **Total** | | **~8 hours** |
 
 ---
 
