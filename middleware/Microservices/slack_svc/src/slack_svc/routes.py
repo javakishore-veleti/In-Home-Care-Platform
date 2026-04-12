@@ -102,5 +102,32 @@ async def slack_events(request: Request) -> dict[str, Any]:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f'Bad JSON: {exc}')
     if body.get('type') == 'url_verification':
         return {'challenge': body.get('challenge', '')}
-    log.info('slack_svc.event', extra={'type': body.get('type'), 'event_type': (body.get('event') or {}).get('type')})
+    event = body.get('event') or {}
+    event_type = event.get('type', '')
+    log.info('slack_svc.event type=%s event_type=%s', body.get('type'), event_type)
+
+    # Interactive Q&A: if a user replies in a thread, check if it's a
+    # briefing thread and dispatch to the knowledge agent for a follow-up answer.
+    if event_type == 'message' and event.get('thread_ts') and not event.get('bot_id'):
+        import os, httpx
+        channel_id = event.get('channel', '')
+        thread_ts = event.get('thread_ts', '')
+        user_text = event.get('text', '')
+        user_id = event.get('user', '')
+        if user_text and channel_id and thread_ts:
+            log.info('slack_svc.thread_reply channel=%s thread_ts=%s user=%s text=%s',
+                     channel_id, thread_ts, user_id, user_text[:100])
+            # Best-effort: call the knowledge agent's Q&A endpoint
+            agent_url = os.getenv('KNOWLEDGE_AGENT_URL', 'http://127.0.0.1:8011')
+            try:
+                async with httpx.AsyncClient(timeout=30) as hc:
+                    await hc.post(f'{agent_url}/qa', json={
+                        'channel_id': channel_id,
+                        'thread_ts': thread_ts,
+                        'user_text': user_text,
+                        'user_id': user_id,
+                    })
+            except Exception as exc:
+                log.warning('slack_svc.qa_dispatch_failed error=%s', exc)
+
     return {'ok': True}

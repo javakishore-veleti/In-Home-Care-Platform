@@ -34,8 +34,10 @@ async def lifespan(_app: FastAPI):
 
 
 def create_app() -> FastAPI:
+    from fastapi import BackgroundTasks, Body
     from prometheus_client import make_asgi_app as prom_asgi
-    from starlette.routing import Mount
+
+    from .qa import handle_qa
 
     application = FastAPI(title='knowledge_agent_svc', version='0.1.0', lifespan=lifespan)
     application.mount('/metrics', prom_asgi())
@@ -47,6 +49,19 @@ def create_app() -> FastAPI:
     @application.get('/version')
     def version() -> dict[str, str]:
         return {'service': 'knowledge_agent_svc', 'version': '0.1.0'}
+
+    @application.post('/qa')
+    async def qa_endpoint(payload: dict = Body(...), background_tasks: BackgroundTasks = None) -> dict:
+        """Receive a thread reply from slack_svc, answer with RAG + LLM."""
+        if background_tasks:
+            background_tasks.add_task(
+                handle_qa,
+                payload.get('channel_id', ''),
+                payload.get('thread_ts', ''),
+                payload.get('user_text', ''),
+                payload.get('user_id', ''),
+            )
+        return {'ok': True}
 
     return application
 

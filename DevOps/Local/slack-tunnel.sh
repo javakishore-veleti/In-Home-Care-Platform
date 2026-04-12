@@ -125,8 +125,15 @@ cmd_up() {
       exit 1
     fi
   else
-    echo "slack-tunnel: starting ngrok against $LOCAL_TARGET"
-    ngrok http 8009 --log=stdout > "$LOG_FILE" 2>&1 &
+    NGROK_DOMAIN="${NGROK_DOMAIN:-}"
+    if [ -n "$NGROK_DOMAIN" ]; then
+      echo "slack-tunnel: starting ngrok with static domain $NGROK_DOMAIN against $LOCAL_TARGET"
+      ngrok http 8009 --domain="$NGROK_DOMAIN" --log=stdout > "$LOG_FILE" 2>&1 &
+    else
+      echo "slack-tunnel: starting ngrok against $LOCAL_TARGET"
+      echo "  (set NGROK_DOMAIN in .env.local for a stable URL across restarts)"
+      ngrok http 8009 --log=stdout > "$LOG_FILE" 2>&1 &
+    fi
     echo "$!" > "$PID_FILE"
   fi
 

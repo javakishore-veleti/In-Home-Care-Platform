@@ -61,6 +61,9 @@ def run_indexing_pipeline(
     from shared.storage import get_database_url, now_utc
     from .chunking import run_all_strategies
 
+    if vectordb_engine == 'qdrant':
+        return _run_qdrant_pipeline(repository_id, collection_id)
+
     if vectordb_engine != 'pgvector':
         log.info('indexing.engine_not_implemented engine=%s', vectordb_engine)
         return {'chunks_indexed': 0, 'chunks_skipped': 0, 'chunks_expired': 0}
@@ -184,3 +187,43 @@ def run_indexing_pipeline(
         'chunks_expired': expired_count,
         'duration_seconds': round(elapsed, 2),
     }
+
+
+def _run_qdrant_pipeline(repository_id: int, collection_id: int) -> dict[str, Any]:
+    """Qdrant indexing: chunk + embed + upsert into Qdrant collection."""
+    from shared.storage import BaseStore
+    from .chunking import run_all_strategies
+    from .qdrant_adapter import upsert_chunks
+
+    t0 = time.time()
+    store = BaseStore('_')
+    if not store.using_db:
+        return {'chunks_indexed': 0, 'chunks_skipped': 0, 'chunks_expired': 0}
+
+    items = store.fetch_all(
+        'SELECT id, title, content_text, item_type FROM knowledge_schema.repository_items WHERE repository_id = %s',
+        (repository_id,),
+    )
+
+    all_chunks: list[dict[str, Any]] = []
+    for item in items:
+        raw = item.get('content_text') or item.get('title', '')
+        if not raw.strip():
+            continue
+        item_chunks = run_all_strategies(raw, embed_fn=embed_texts)
+        for chunk in item_chunks:
+            chunk['item_id'] = item['id']
+        all_chunks.extend(item_chunks)
+
+    if not all_chunks:
+        return {'chunks_indexed': 0, 'chunks_skipped': 0, 'chunks_expired': 0}
+
+    chunk_texts = [c['chunk_text'] for c in all_chunks]
+    embeddings = embed_texts(chunk_texts)
+
+    collection_name = f'collection_{collection_id}'
+    count = upsert_chunks(collection_name, all_chunks, embeddings)
+
+    elapsed = time.time() - t0
+    log.info('indexing.qdrant_done repository_id=%d indexed=%d elapsed=%.1fs', repository_id, count, elapsed)
+    return {'chunks_indexed': count, 'chunks_skipped': 0, 'chunks_expired': 0, 'duration_seconds': round(elapsed, 2)}
