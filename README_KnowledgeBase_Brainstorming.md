@@ -63,6 +63,18 @@
   - [17.7 Storage Math](#177-storage-math)
   - [17.8 Implementation Plan](#178-implementation-plan)
 - [18. Implementation Status](#18-implementation-status)
+- [19. Multi-LLM Fan-Out, Token Economics & Observability](#19-multi-llm-fan-out-token-economics--observability)
+  - [19.1 The Concept](#191-the-concept)
+  - [19.2 Architecture](#192-architecture)
+  - [19.3 Model Registry](#193-model-registry)
+  - [19.4 Data Model — llm_responses](#194-data-model--llm_responses)
+  - [19.5 Token Economics Tracking](#195-token-economics-tracking)
+  - [19.6 Prometheus Metrics](#196-prometheus-metrics)
+  - [19.7 Grafana Dashboards](#197-grafana-dashboards)
+  - [19.8 Kibana Logging](#198-kibana-elk-logging)
+  - [19.9 Appointment Detail — LLM Responses Listing](#199-appointment-detail--llm-responses-listing)
+  - [19.10 Updated Phase Plan](#1910-updated-phase-plan)
+  - [19.11 Airflow Fan-Out + Per-User Model Override](#1911-airflow-fan-out--per-user-model-override)
 
 ---
 
@@ -2051,6 +2063,496 @@ What has been built vs. what remains, as of 2026-04-12.
 | Knowledge source | **Local folder** (dev), S3 (future) | knowledge_data/ gitignored, auto-created on repo create |
 | Dedup strategy | **SHA-256 content hash** per chunk (LiveVectorLake) | Skip unchanged chunks on re-index, ~90% cost reduction |
 | Temporal queries | **valid_from / valid_until** on chunks (LiveVectorLake) | Point-in-time compliance queries for healthcare audit |
+
+---
+
+---
+
+## 19. Multi-LLM Fan-Out, Token Economics & Observability
+
+### 19.1 The concept
+
+When a field officer claims an appointment, the system doesn't just
+call one LLM — it **fans out the same RAG-augmented prompt to every
+configured model** (Claude, GPT, Gemini, Ollama/local, Qwen, etc.),
+stores every response, tracks token usage + cost per model, and
+surfaces all responses in the appointment detail page so admins can
+**compare model quality side-by-side**.
+
+This turns the platform into an **LLM evaluation framework** built
+into the product — not a separate tool. Every real appointment is an
+evaluation datapoint. Over time, the org learns which model produces
+the best briefings for which service type, at what cost.
+
+### 19.2 Architecture
+
+```
+Appointment claimed → Kafka appointment.claimed
+    │
+    ▼
+knowledge_agent_svc
+    │
+    ├─► RAG search (Phase 2c) → top chunks from pgvector
+    │
+    ├─► Assemble prompt (system + RAG context + member history)
+    │
+    ├─► Fan-out to ALL enabled models (parallel):
+    │   ├─► Claude (Anthropic API)
+    │   ├─► GPT-4o (OpenAI API)
+    │   ├─► Gemini (Google AI / Vertex)
+    │   ├─► Ollama (local, no API key)
+    │   ├─► Qwen (Alibaba Cloud or local)
+    │   ├─► Mistral
+    │   ├─► Llama 3 (via Ollama or Groq)
+    │   └─► ... (extensible)
+    │
+    ├─► For EACH response:
+    │   ├─► Track: input_tokens, output_tokens, cost_usd, latency_ms
+    │   ├─► Store in llm_responses table
+    │   └─► Emit Prometheus metrics
+    │
+    ├─► Pick the PRIMARY response (configurable: fastest, cheapest,
+    │   highest-quality model, or admin-selected default)
+    │
+    └─► Post PRIMARY response as Slack threaded reply
+        (other responses visible in admin/support/field portals)
+```
+
+### 19.3 Model registry
+
+A system-level config (JSON or DB table) lists every supported LLM
+with its API endpoint, pricing, and enabled status:
+
+```json
+{
+  "models": [
+    {
+      "id": "claude-sonnet-4",
+      "provider": "anthropic",
+      "display_name": "Claude Sonnet 4",
+      "api_base": "https://api.anthropic.com/v1",
+      "model_id": "claude-sonnet-4-20250514",
+      "input_cost_per_1k": 0.003,
+      "output_cost_per_1k": 0.015,
+      "max_context_tokens": 200000,
+      "enabled": true,
+      "is_primary": true,
+      "env_key": "ANTHROPIC_API_KEY"
+    },
+    {
+      "id": "gpt-4o",
+      "provider": "openai",
+      "display_name": "GPT-4o",
+      "api_base": "https://api.openai.com/v1",
+      "model_id": "gpt-4o",
+      "input_cost_per_1k": 0.0025,
+      "output_cost_per_1k": 0.01,
+      "max_context_tokens": 128000,
+      "enabled": true,
+      "is_primary": false,
+      "env_key": "OPENAI_API_KEY"
+    },
+    {
+      "id": "gemini-2.0-flash",
+      "provider": "google",
+      "display_name": "Gemini 2.0 Flash",
+      "api_base": "https://generativelanguage.googleapis.com/v1",
+      "model_id": "gemini-2.0-flash",
+      "input_cost_per_1k": 0.0001,
+      "output_cost_per_1k": 0.0004,
+      "max_context_tokens": 1000000,
+      "enabled": false,
+      "is_primary": false,
+      "env_key": "GOOGLE_AI_API_KEY"
+    },
+    {
+      "id": "ollama-llama3",
+      "provider": "ollama",
+      "display_name": "Llama 3 (local via Ollama)",
+      "api_base": "http://localhost:11434",
+      "model_id": "llama3",
+      "input_cost_per_1k": 0.0,
+      "output_cost_per_1k": 0.0,
+      "max_context_tokens": 8192,
+      "enabled": false,
+      "is_primary": false,
+      "env_key": null
+    },
+    {
+      "id": "qwen-2.5",
+      "provider": "ollama",
+      "display_name": "Qwen 2.5 (local via Ollama)",
+      "api_base": "http://localhost:11434",
+      "model_id": "qwen2.5",
+      "input_cost_per_1k": 0.0,
+      "output_cost_per_1k": 0.0,
+      "max_context_tokens": 32768,
+      "enabled": false,
+      "is_primary": false,
+      "env_key": null
+    },
+    {
+      "id": "mistral-large",
+      "provider": "mistral",
+      "display_name": "Mistral Large",
+      "api_base": "https://api.mistral.ai/v1",
+      "model_id": "mistral-large-latest",
+      "input_cost_per_1k": 0.002,
+      "output_cost_per_1k": 0.006,
+      "max_context_tokens": 128000,
+      "enabled": false,
+      "is_primary": false,
+      "env_key": "MISTRAL_API_KEY"
+    }
+  ]
+}
+```
+
+Admin UI: a **Model Registry** page showing all models with
+enable/disable toggles, cost display, and a "Set as primary" button.
+Disabled models are skipped during fan-out. Models without their
+`env_key` set in `.env.local` are greyed out (same pattern as vector
+DB checkboxes).
+
+### 19.4 Data model — llm_responses
+
+```sql
+CREATE TABLE knowledge_schema.llm_responses (
+    id                  SERIAL PRIMARY KEY,
+    appointment_id      INT NOT NULL,
+    model_id            VARCHAR(50) NOT NULL,
+    provider            VARCHAR(30) NOT NULL,
+    display_name        VARCHAR(100),
+
+    -- Prompt
+    system_prompt       TEXT,
+    user_prompt         TEXT NOT NULL,
+    rag_chunks_used     INT,
+    rag_chunk_ids       INT[],
+
+    -- Response
+    response_text       TEXT NOT NULL,
+    finish_reason       VARCHAR(30),
+
+    -- Token economics
+    input_tokens        INT NOT NULL DEFAULT 0,
+    output_tokens       INT NOT NULL DEFAULT 0,
+    total_tokens        INT GENERATED ALWAYS AS (input_tokens + output_tokens) STORED,
+    input_cost_usd      NUMERIC(10, 6) DEFAULT 0,
+    output_cost_usd     NUMERIC(10, 6) DEFAULT 0,
+    total_cost_usd      NUMERIC(10, 6) GENERATED ALWAYS AS
+                         (input_cost_usd + output_cost_usd) STORED,
+
+    -- Performance
+    latency_ms          INT,
+    is_primary           BOOLEAN DEFAULT FALSE,
+
+    -- Feedback (future: thumbs up/down from field officer)
+    rating              SMALLINT,     -- 1-5 or NULL
+    rating_comment      TEXT,
+
+    -- Audit
+    created_at          TIMESTAMPTZ DEFAULT now(),
+    service_type        VARCHAR(100),
+    collection_slug     VARCHAR(255)
+);
+
+CREATE INDEX ix_llm_responses_appointment ON knowledge_schema.llm_responses(appointment_id);
+CREATE INDEX ix_llm_responses_model ON knowledge_schema.llm_responses(model_id);
+```
+
+### 19.5 Token economics tracking
+
+Every LLM call records:
+
+| Field | Source | Used for |
+|---|---|---|
+| `input_tokens` | API response (usage.input_tokens) | Cost calc, optimization |
+| `output_tokens` | API response (usage.output_tokens) | Cost calc, quota tracking |
+| `input_cost_usd` | `input_tokens / 1000 * model.input_cost_per_1k` | Budget dashboards |
+| `output_cost_usd` | `output_tokens / 1000 * model.output_cost_per_1k` | Budget dashboards |
+| `latency_ms` | `time.time()` before/after call | Performance comparison |
+
+**Token optimization strategies** (built into the pipeline):
+
+1. **Prompt caching**: Claude supports prompt caching — if the system
+   prompt + RAG context is reused across appointments with the same
+   service type, cache it for 5 min. Saves ~90% of input tokens on
+   cache hits.
+2. **Context window fitting**: before sending, count tokens and trim
+   RAG chunks from the bottom of the list if the total exceeds the
+   model's `max_context_tokens`. Different models have different
+   limits (GPT-4o: 128K, Llama 3: 8K, Gemini: 1M).
+3. **Short-circuit for local models**: Ollama/Qwen run locally with
+   zero API cost. Use them as the baseline; only fan out to paid
+   models when the admin enables them.
+
+### 19.6 Prometheus metrics
+
+Emitted by knowledge_agent_svc on every LLM call:
+
+```python
+# Counters
+llm_requests_total{model, provider, service_type, status}
+llm_tokens_input_total{model, provider}
+llm_tokens_output_total{model, provider}
+llm_cost_usd_total{model, provider}
+
+# Histograms
+llm_latency_seconds{model, provider}
+llm_tokens_per_request{model, provider, direction}  # input vs output
+
+# Gauges
+llm_models_enabled_count
+rag_chunks_per_query{collection}
+```
+
+### 19.7 Grafana dashboards
+
+Three dashboards, all fed by Prometheus:
+
+**Dashboard 1: LLM Cost & Usage**
+```
+┌─────────────────────────────────────────────────────┐
+│  Total cost today: $2.47                             │
+│  Total tokens today: 142,000                         │
+│                                                     │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐ │
+│  │ Claude       │  │ GPT-4o      │  │ Ollama      │ │
+│  │ $1.82        │  │ $0.65       │  │ $0.00       │ │
+│  │ 85K tokens   │  │ 47K tokens  │  │ 10K tokens  │ │
+│  └─────────────┘  └─────────────┘  └─────────────┘ │
+│                                                     │
+│  [time-series: cost per hour, stacked by model]      │
+│  [time-series: tokens per hour, stacked by model]    │
+└─────────────────────────────────────────────────────┘
+```
+
+**Dashboard 2: LLM Performance Comparison**
+```
+┌─────────────────────────────────────────────────────┐
+│  Median latency by model (p50 / p95 / p99)           │
+│  ┌──────────────────────────────────────────────┐    │
+│  │ Ollama Llama3   │ 1.2s / 2.1s / 3.5s        │    │
+│  │ GPT-4o-mini     │ 0.8s / 1.5s / 2.2s        │    │
+│  │ Claude Sonnet   │ 1.5s / 2.8s / 4.0s        │    │
+│  │ Gemini Flash    │ 0.5s / 0.9s / 1.3s        │    │
+│  └──────────────────────────────────────────────┘    │
+│                                                     │
+│  [heatmap: latency distribution per model]           │
+│  [bar chart: avg tokens per response by model]       │
+└─────────────────────────────────────────────────────┘
+```
+
+**Dashboard 3: RAG Quality & Knowledge Base Health**
+```
+┌─────────────────────────────────────────────────────┐
+│  Chunks indexed: 840   Active: 780   Expired: 60     │
+│  Collections: 7   Repositories: 25                   │
+│  Avg chunks per query: 5.2                           │
+│  Avg similarity score: 0.82                          │
+│                                                     │
+│  [time-series: queries per hour]                     │
+│  [bar chart: chunks by strategy (sentence/recursive/ │
+│   semantic/parent_doc)]                              │
+│  [table: most-queried collections]                   │
+└─────────────────────────────────────────────────────┘
+```
+
+### 19.8 Kibana (ELK) logging
+
+Structured JSON logs from knowledge_agent_svc, indexed by Kibana:
+
+```json
+{
+  "timestamp": "2026-04-12T10:30:00Z",
+  "event": "llm.response",
+  "appointment_id": 42,
+  "model_id": "claude-sonnet-4",
+  "provider": "anthropic",
+  "service_type": "Personal Care & Companionship",
+  "input_tokens": 1200,
+  "output_tokens": 350,
+  "cost_usd": 0.0089,
+  "latency_ms": 1850,
+  "rag_chunks_used": 5,
+  "rag_strategies": ["sentence", "recursive", "semantic"],
+  "finish_reason": "end_turn",
+  "is_primary": true
+}
+```
+
+Enables: full-text search on response content, filtering by model,
+drill-down from Grafana panels to individual requests, compliance
+audit ("what did the LLM tell the field officer before this visit?").
+
+### 19.9 Appointment detail — LLM Responses listing
+
+Every portal (admin, support, field officer) shows a new
+**Knowledge Briefings** section on the appointment detail page:
+
+```
+┌─────────────────────────────────────────────────────┐
+│  Appointment #42 — claimed                           │
+│  ...existing detail cards...                         │
+│                                                     │
+│  ── Knowledge Briefings ──────────────────────────   │
+│                                                     │
+│  ┌──────────────────────────────────────────────┐    │
+│  │ ⭐ PRIMARY — Claude Sonnet 4                  │    │
+│  │ 1,200 input / 350 output tokens   $0.009      │    │
+│  │ Latency: 1.85s                                │    │
+│  │                                               │    │
+│  │ Based on 5 knowledge-base documents:           │    │
+│  │ 1. Hygiene Guidelines — always wear gloves...  │    │
+│  │ 2. Medication checklist — confirm schedule...  │    │
+│  │ 3. Care protocol v4.2 — 5-step arrival...      │    │
+│  │                                               │    │
+│  │ [👍] [👎] [Expand full response]              │    │
+│  └──────────────────────────────────────────────┘    │
+│                                                     │
+│  ┌──────────────────────────────────────────────┐    │
+│  │ GPT-4o                                        │    │
+│  │ 1,180 input / 280 output tokens   $0.006      │    │
+│  │ Latency: 0.95s                                │    │
+│  │                                               │    │
+│  │ For this Personal Care visit, note the...      │    │
+│  │                                               │    │
+│  │ [👍] [👎] [Expand full response]              │    │
+│  └──────────────────────────────────────────────┘    │
+│                                                     │
+│  ┌──────────────────────────────────────────────┐    │
+│  │ Llama 3 (Ollama, local)                       │    │
+│  │ 980 input / 420 output tokens   $0.000         │    │
+│  │ Latency: 2.10s                                │    │
+│  │                                               │    │
+│  │ Before the visit, ensure you have reviewed...  │    │
+│  │                                               │    │
+│  │ [👍] [👎] [Expand full response]              │    │
+│  └──────────────────────────────────────────────┘    │
+└─────────────────────────────────────────────────────┘
+```
+
+**Thumbs up/down** feeds back into the `rating` column on
+`llm_responses` — future analytics can correlate rating with model,
+service type, and prompt to improve over time.
+
+### 19.10 Updated phase plan
+
+| Phase | What | Status |
+|---|---|---|
+| **Phase 2c** | RAG search API | Next to build |
+| **Phase 3a** | LLM model registry + llm_responses table + single-model briefing | Build after 2c |
+| **Phase 3b** | Multi-LLM fan-out + token tracking + cost calculation | Build after 3a |
+| **Phase 3c** | Slack threaded reply (primary model response) | Build after 3a |
+| **Phase 3d** | Appointment detail Knowledge Briefings UI (all portals) | Build after 3b |
+| **Phase 3e** | Thumbs up/down feedback loop | Build after 3d |
+| **Phase 4** | Interactive Slack Q&A | After 3 |
+| **Phase 5a** | Prometheus metrics for LLM calls | After 3b |
+| **Phase 5b** | Grafana dashboards (cost, performance, RAG quality) | After 5a |
+| **Phase 5c** | Kibana structured logging | After 5a |
+| **Phase 5d** | Airflow + S3 + multi-tenant | After 5c |
+
+---
+
+### 19.11 Airflow fan-out + per-user model override
+
+**Airflow as the LLM orchestrator** (not inline BackgroundTask):
+
+When an appointment is claimed, the knowledge_agent_svc publishes a
+Kafka event. **Airflow** (not the inline pipeline) picks it up and
+fans out one task per enabled model — all run in parallel:
+
+```
+Kafka: appointment.claimed
+    │
+    ▼
+Airflow DAG: llm_briefing_fanout
+    │
+    ├─► Task: rag_retrieve (shared — one query, reused by all models)
+    │
+    ├─► Task: call_claude     ──► store llm_response row
+    ├─► Task: call_gpt4o      ──► store llm_response row
+    ├─► Task: call_gemini     ──► store llm_response row
+    ├─► Task: call_ollama     ──► store llm_response row
+    ├─► Task: call_qwen       ──► store llm_response row
+    │   (all parallel — Airflow fan-out)
+    │
+    ├─► Task: pick_primary
+    │   Read the global config → determine which model is primary
+    │   Mark that response row as is_primary=true
+    │
+    └─► Task: post_to_slack
+        Post ONLY the primary response as a Slack threaded reply
+```
+
+**Why Airflow** (not BackgroundTask):
+- Parallel execution across models (BackgroundTask is single-threaded)
+- Per-task retries (if Claude is rate-limited, retry that task only)
+- Monitoring UI (see which models succeeded/failed/are slow)
+- DAG-level timeout (don't let a slow model block the others)
+
+**Slack shows only one response:**
+
+The Slack threaded reply always shows the **primary** model's
+response. Which model is primary is determined by a cascade:
+
+```
+1. Per-appointment override (if the admin set a preferred model
+   for this specific appointment) → use that model
+2. Per-user preference (if the field officer set a preferred model
+   in their profile) → use that model
+3. Global default (system-level config: is_primary=true in the
+   model registry) → use that model
+```
+
+**Data model for per-user override:**
+
+```sql
+-- In auth_schema.users (existing table)
+ALTER TABLE auth_schema.users ADD COLUMN
+    preferred_llm_model VARCHAR(50);  -- NULL = use global default
+
+-- In appointment_schema.appointments (existing table)
+ALTER TABLE appointment_schema.appointments ADD COLUMN
+    preferred_llm_model VARCHAR(50);  -- NULL = use user pref → global
+```
+
+**Resolution logic** (in pick_primary task):
+
+```python
+def resolve_primary_model(appointment, user, model_registry):
+    # 1. Appointment-level override
+    if appointment.get('preferred_llm_model'):
+        return appointment['preferred_llm_model']
+    # 2. User-level preference
+    if user.get('preferred_llm_model'):
+        return user['preferred_llm_model']
+    # 3. Global default
+    for model in model_registry:
+        if model.get('is_primary'):
+            return model['id']
+    # 4. Fallback
+    return 'claude-sonnet-4'
+```
+
+**Admin portal: all responses visible**
+
+Even though Slack shows only the primary, the **appointment detail
+page** in admin/support/field portals shows ALL responses side by
+side — every model's briefing, token count, cost, latency. This lets:
+
+- **Admins** compare model quality and decide which to set as primary
+- **Field officers** switch their preferred model if they find one
+  produces better briefings for their service type
+- **Auditors** see exactly what each model said about each appointment
+
+**Per-user model preference in the UI:**
+
+Field officers see a small dropdown on their **profile page** (or in
+the appointment detail) letting them pick their preferred model. The
+dropdown lists all enabled models with their display name and a cost
+indicator ($, $$, $$$, or "free" for local models).
 
 ---
 
