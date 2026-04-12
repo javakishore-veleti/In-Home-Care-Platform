@@ -6,6 +6,9 @@ import { AppointmentDetailPage } from './pages/AppointmentDetailPage'
 import { AppointmentsPage } from './pages/AppointmentsPage'
 import { ClaimsPage } from './pages/ClaimsPage'
 import { DashboardPage } from './pages/DashboardPage'
+import { KBCollectionDetailPage } from './pages/KBCollectionDetailPage'
+import { KBCollectionsPage } from './pages/KBCollectionsPage'
+import { KBRepositoryDetailPage } from './pages/KBRepositoryDetailPage'
 import { MemberDetailPage } from './pages/MemberDetailPage'
 import { MembersPage } from './pages/MembersPage'
 import { SignInPage } from './pages/SignInPage'
@@ -30,6 +33,9 @@ function App() {
           <Route path="/app/members/:memberId" element={<MemberDetailPage />} />
           <Route path="/app/staff" element={<StaffPage />} />
           <Route path="/app/slack-integrations" element={<SlackIntegrationsPage />} />
+          <Route path="/app/knowledge-base" element={<KBCollectionsPage />} />
+          <Route path="/app/knowledge-base/:collectionId" element={<KBCollectionDetailPage />} />
+          <Route path="/app/knowledge-base/:collectionId/repo/:repoId" element={<KBRepositoryDetailPage />} />
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/app" replace />} />

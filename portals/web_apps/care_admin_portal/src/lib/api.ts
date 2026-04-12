@@ -2,6 +2,9 @@ import type {
   AppointmentRow,
   AuthSessionResponse,
   DashboardStats,
+  KBCollection,
+  KBItem,
+  KBRepository,
   MemberRow,
   PaginatedResponse,
   SlackChannelsResponse,
@@ -104,5 +107,59 @@ export const api = {
     return request<void>(`/api/admin/slack/integrations/${integrationId}`, {
       method: 'DELETE',
     }, token)
+  },
+  // ----- Knowledge Base -----
+  listKBCollections(token: string) {
+    return request<{ items: KBCollection[]; total: number }>('/api/admin/knowledge/collections', {}, token)
+  },
+  getKBCollection(token: string, id: number) {
+    return request<KBCollection>(`/api/admin/knowledge/collections/${id}`, {}, token)
+  },
+  listKBRepositories(token: string, collectionId: number) {
+    return request<{ items: KBRepository[]; total: number }>(`/api/admin/knowledge/collections/${collectionId}/repositories`, {}, token)
+  },
+  getKBRepository(token: string, repoId: number) {
+    return request<KBRepository>(`/api/admin/knowledge/repositories/${repoId}`, {}, token)
+  },
+  createKBRepository(token: string, collectionId: number, payload: Record<string, unknown>) {
+    return request<KBRepository>(`/api/admin/knowledge/collections/${collectionId}/repositories`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }, token)
+  },
+  lockKBRepository(token: string, repoId: number) {
+    return request<KBRepository>(`/api/admin/knowledge/repositories/${repoId}/lock`, { method: 'POST' }, token)
+  },
+  unlockKBRepository(token: string, repoId: number) {
+    return request<KBRepository>(`/api/admin/knowledge/repositories/${repoId}/unlock`, { method: 'POST' }, token)
+  },
+  publishKBRepository(token: string, repoId: number) {
+    return request<KBRepository>(`/api/admin/knowledge/repositories/${repoId}/publish`, { method: 'POST' }, token)
+  },
+  listKBItems(token: string, repoId: number) {
+    return request<{ items: KBItem[]; total: number }>(`/api/admin/knowledge/repositories/${repoId}/items`, {}, token)
+  },
+  createKBItem(token: string, repoId: number, payload: Record<string, unknown>) {
+    return request<KBItem>(`/api/admin/knowledge/repositories/${repoId}/items`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }, token)
+  },
+  async uploadKBFile(token: string, repoId: number, file: File) {
+    const formData = new FormData()
+    formData.append('file', file)
+    const headers = new Headers()
+    headers.set('Authorization', `Bearer ${token}`)
+    const resp = await fetch(`${API_BASE_URL}/api/admin/knowledge/repositories/${repoId}/items/upload`, {
+      method: 'POST',
+      headers,
+      body: formData,
+    })
+    const data = await resp.json().catch(() => ({}))
+    if (!resp.ok) throw new ApiError(data.detail ?? 'Upload failed.', resp.status)
+    return data as KBItem
+  },
+  deleteKBItem(token: string, itemId: number) {
+    return request<void>(`/api/admin/knowledge/items/${itemId}`, { method: 'DELETE' }, token)
   },
 }

@@ -110,3 +110,57 @@ export interface SlackChannelsResponse {
   bot_user_id: string | null
   team: string | null
 }
+
+// ----- Knowledge Base -----
+
+export interface KBCollection {
+  id: number
+  name: string
+  slug: string
+  service_type?: string | null
+  description?: string | null
+  icon_emoji: string
+  org_id: string
+  jurisdiction?: string | null
+  repo_count: number
+  total_chunks: number
+  created_at?: string | null
+  updated_at?: string | null
+}
+
+export interface KBRepository {
+  id: number
+  collection_id: number
+  name: string
+  slug: string
+  repo_type: string
+  status: string
+  description?: string | null
+  source_mode: string
+  source_path?: string | null
+  org_id: string
+  jurisdictions?: string[] | null
+  item_count: number
+  chunk_count: number
+  last_indexed_at?: string | null
+  last_error?: string | null
+  created_by_user_id?: number | null
+  created_at?: string | null
+  updated_at?: string | null
+}
+
+export interface KBItem {
+  id: number
+  repository_id: number
+  collection_id: number
+  item_type: string
+  title: string
+  content_text?: string | null
+  source_url?: string | null
+  file_path?: string | null
+  file_name?: string | null
+  file_size_bytes?: number | null
+  mime_type?: string | null
+  chunk_count: number
+  created_at?: string | null
+}

@@ -14,7 +14,7 @@ if [ ! -f "$ALEMBIC" ]; then
   exit 1
 fi
 
-SERVICES="auth_svc member_svc appointment_svc visit_management_svc visit_ingest_svc document_intelligence_svc collection_ingest_svc"
+SERVICES="auth_svc member_svc appointment_svc visit_management_svc visit_ingest_svc document_intelligence_svc knowledge_svc collection_ingest_svc"
 
 echo "=== Creating database if needed ==="
 PGPASSWORD=care psql -h localhost -U care -d postgres -c "CREATE DATABASE in_home_care_platform" 2>/dev/null || echo "Database in_home_care_platform already exists"
