@@ -27,7 +27,7 @@ EMBEDDING_DIM = 384
 
 
 def upgrade() -> None:
-    op.execute('CREATE EXTENSION IF NOT EXISTS vector')
+    op.execute('CREATE EXTENSION IF NOT EXISTS vector SCHEMA public')
 
     bind = op.get_bind()
     inspector = sa.inspect(bind)
