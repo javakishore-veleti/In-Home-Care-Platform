@@ -833,5 +833,173 @@ Things to decide before or during implementation:
 
 ---
 
+---
+
+## 14. Research Insights — Papers to Incorporate
+
+Two arxiv papers directly inform the architecture. Key techniques
+worth stealing for Phase 2–3.
+
+### 14.1 EICopilot (Baidu, arxiv 2501.13746) — Query Masking for Intent-Based RAG
+
+**Paper**: deployed at scale on Baidu Enterprise Search (5,000 DAU,
+hundreds of millions of graph nodes). Core insight: when matching a
+user's natural-language query against a bank of example queries for
+few-shot RAG retrieval, **mask the entity names first** so the
+similarity search matches on *intent structure*, not surface-level
+entity overlap.
+
+**How it applies to our knowledge base**:
+
+When a field officer asks "What should I know before a Personal Care
+visit?", the naive RAG approach embeds that string and matches against
+chunks that mention "Personal Care". With query masking, we replace
+"Personal Care" with `<SERVICE_TYPE>`, so the query becomes "What
+should I know before a `<SERVICE_TYPE>` visit?". Now the vector search
+finds structurally similar queries from ALL collections — e.g. a Skilled
+Nursing FAQ that says "always check medication schedule before a
+`<SERVICE_TYPE>` visit" — which is highly relevant but would score low
+without masking because the entity name doesn't match.
+
+**Implementation cost**: ~10 lines in the RAG search endpoint. Before
+embedding the query, regex-replace known service-type names with a
+generic token. Reverse-substitute in the results before showing the
+user.
+
+**Their results**: execution correctness went from 17–41% (zero-shot)
+to 82–84% (masked + top-5 examples). Syntax errors halved.
+
+**Also steal**:
+
+- **Reflection loop**: if the LangGraph briefing agent generates a
+  response the LLM flags as low-confidence, re-retrieve with a
+  reformulated query and try again. Add as an optional conditional
+  edge in the LangGraph state graph between `synthesize_briefing` and
+  `rag_retrieve` — loops at most once, costs one extra LLM call on
+  low-confidence responses.
+- **Seed dataset**: curate 20–30 "gold" field-officer questions per
+  service type (offline, by an admin or domain expert). Embed them and
+  use as the few-shot example pool in the LLM prompt. This is their
+  "offline phase" and is the single highest-ROI investment for RAG
+  quality.
+
+### 14.2 LiveVectorLake (arxiv 2601.05270) — Temporal Vector Lake for Mutable Enterprise Knowledge
+
+**Paper**: addresses the gap between "batch re-index everything" and
+"real-time incremental update" for RAG over mutable document corpora.
+Core architecture: dual-tier storage (hot Milvus/vector index for
+current chunks, cold Delta Lake/Parquet for full version history) with
+content-addressable chunk deduplication via SHA-256 hashing.
+
+**How it applies to our knowledge base**:
+
+Healthcare compliance requires knowing "what information was available
+to the field officer at the time of the visit" — not just the current
+state of the knowledge base. When an admin updates a care protocol PDF:
+
+1. The old chunks shouldn't disappear from the audit trail.
+2. Only the paragraphs that actually changed should be re-embedded
+   (saves embedding API cost).
+3. The RAG query for a *current* briefing should see the new version;
+   a compliance audit query for a *past* visit should see the version
+   that existed at visit time.
+
+**Implementation — 3 columns added to `collection_chunks`**:
+
+```sql
+ALTER TABLE knowledge_schema.collection_chunks ADD COLUMN
+  content_hash  CHAR(64)       NOT NULL,  -- SHA-256 of chunk_text
+  valid_from    TIMESTAMPTZ    NOT NULL DEFAULT now(),
+  valid_until   TIMESTAMPTZ;              -- NULL = current
+```
+
+- **On item update**: compute chunk hashes for the new version.
+  For each hash that already exists (unchanged paragraph), do nothing.
+  For new/changed hashes, INSERT with `valid_from = now()`. For
+  removed hashes, UPDATE `valid_until = now()` on the old rows.
+- **Current RAG query**: `WHERE valid_until IS NULL` → only active
+  chunks, keeps the cosine-similarity index small and fast.
+- **Historical/compliance query**: `WHERE valid_from <= :visit_date
+  AND (valid_until IS NULL OR valid_until > :visit_date)` → exact
+  point-in-time knowledge reconstruction.
+
+**Their results**:
+
+| Metric | Before | After |
+|---|---|---|
+| Content re-processed on update | 85–95% | 10–15% |
+| Current query latency (p50) | — | 65 ms |
+| Historical query latency (p50) | — | 1.2 s |
+| Hot-tier chunk reduction | — | 90% fewer active chunks |
+| Temporal accuracy | — | 100% (zero temporal leakage) |
+
+**Also steal**:
+
+- **Deterministic CDC**: hash each chunk at ingest time. If the hash
+  matches an existing row, skip the embedding API call entirely. Their
+  system reduced change detection from ~100 ms DB queries to <1 ms
+  in-memory hash lookups.
+- **Temporal query routing**: add a `mode` parameter to the search
+  API (`mode=current` vs `mode=historical&as_of=2026-04-01`). The
+  briefing agent always uses `current`; a future compliance agent uses
+  `historical` with the visit date.
+
+### 14.3 Combined impact on our Phase 2 data model
+
+Incorporating both papers, the `collection_chunks` table becomes:
+
+```sql
+CREATE TABLE knowledge_schema.collection_chunks (
+    id              SERIAL PRIMARY KEY,
+    item_id         INT NOT NULL REFERENCES collection_items(id) ON DELETE CASCADE,
+    collection_id   INT NOT NULL REFERENCES collections(id),
+    chunk_index     INT NOT NULL,
+    chunk_text      TEXT NOT NULL,
+    embedding       VECTOR(1536),
+    content_hash    CHAR(64) NOT NULL,          -- LiveVectorLake: dedup + CDC
+    valid_from      TIMESTAMPTZ NOT NULL DEFAULT now(),  -- LiveVectorLake: temporal
+    valid_until     TIMESTAMPTZ,                -- NULL = current; set on update
+    token_count     INT,
+    created_at      TIMESTAMPTZ DEFAULT now()
+);
+
+-- Only index CURRENT chunks for fast cosine similarity
+CREATE INDEX ix_chunks_active_embedding ON knowledge_schema.collection_chunks
+    USING ivfflat (embedding vector_cosine_ops)
+    WITH (lists = 100)
+    WHERE valid_until IS NULL;
+
+-- Fast hash-based dedup lookup
+CREATE INDEX ix_chunks_content_hash ON knowledge_schema.collection_chunks(content_hash);
+```
+
+And the RAG search function adds **query masking** (EICopilot) before
+embedding:
+
+```python
+def search(collection_slug: str, query: str, top_k: int = 5,
+           mode: str = "current", as_of: datetime | None = None):
+    # EICopilot: mask service-type names for intent matching
+    masked_query = mask_service_types(query)
+    query_embedding = embed(masked_query)
+
+    # LiveVectorLake: temporal filtering
+    if mode == "current":
+        where = "valid_until IS NULL"
+    else:
+        where = f"valid_from <= '{as_of}' AND (valid_until IS NULL OR valid_until > '{as_of}')"
+
+    results = vector_search(
+        embedding=query_embedding,
+        collection_id=collection_id,
+        where=where,
+        top_k=top_k,
+    )
+    # Unmask service-type names in results before returning
+    return unmask_results(results, collection_slug)
+```
+
+---
+
 *This document is a living brainstorm. Mark decisions with ✅ as you
 make them, then tell Claude "build phase N" to start implementation.*
