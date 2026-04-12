@@ -177,6 +177,7 @@ export interface ChunkRow {
   item_id: number
   chunk_index: number
   chunk_text: string
+  chunk_strategy?: string | null
   content_hash_short: string
   token_count?: number | null
   valid_from?: string | null

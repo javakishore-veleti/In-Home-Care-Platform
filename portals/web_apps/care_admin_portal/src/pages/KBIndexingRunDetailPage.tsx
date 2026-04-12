@@ -140,6 +140,7 @@ export function KBIndexingRunDetailPage() {
               <thead>
                 <tr className="bg-[#0D7377] text-white text-sm">
                   <th className="px-4 py-3">ID</th>
+                  <th className="px-4 py-3">Strategy</th>
                   <th className="px-4 py-3">Source Item</th>
                   <th className="px-4 py-3">Chunk</th>
                   <th className="px-4 py-3">Text Preview</th>
@@ -151,6 +152,17 @@ export function KBIndexingRunDetailPage() {
                 {chunks.items.map(chunk => (
                   <tr key={chunk.id} className="border-b border-[#0D7377]/10 text-sm">
                     <td className="px-4 py-3 font-mono text-xs">C-{chunk.id}</td>
+                    <td className="px-4 py-3">
+                      <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${
+                        chunk.chunk_strategy === 'sentence' ? 'bg-[#E8612D]/15 text-[#E8612D]' :
+                        chunk.chunk_strategy === 'recursive' ? 'bg-[#0D7377]/15 text-[#0D7377]' :
+                        chunk.chunk_strategy === 'semantic' ? 'bg-[#6A1B9A]/15 text-[#6A1B9A]' :
+                        chunk.chunk_strategy === 'parent_doc' ? 'bg-[#1976D2]/15 text-[#1976D2]' :
+                        'bg-[#3D5A73]/15 text-[#3D5A73]'
+                      }`}>
+                        {chunk.chunk_strategy ?? 'unknown'}
+                      </span>
+                    </td>
                     <td className="px-4 py-3">
                       <div className="text-xs">
                         {ITEM_ICONS[chunk.item_type ?? ''] ?? '📎'}{' '}

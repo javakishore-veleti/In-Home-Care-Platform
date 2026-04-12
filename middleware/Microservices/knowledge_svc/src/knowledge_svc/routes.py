@@ -254,13 +254,14 @@ def list_chunks(repo_id: int, page: int = 1, page_size: int = 20) -> dict[str, A
     total = int(total_row['count']) if total_row else 0
     items = store.fetch_all(
         '''SELECT c.id, c.item_id, c.chunk_index, c.chunk_text,
+                  c.chunk_strategy,
                   LEFT(c.content_hash, 12) AS content_hash_short,
                   c.token_count, c.valid_from,
                   i.title AS item_title, i.item_type
            FROM knowledge_schema.collection_chunks c
            LEFT JOIN knowledge_schema.repository_items i ON i.id = c.item_id
            WHERE c.repository_id = %s AND c.valid_until IS NULL
-           ORDER BY c.item_id, c.chunk_index
+           ORDER BY c.chunk_strategy, c.item_id, c.chunk_index
            LIMIT %s OFFSET %s''',
         (repo_id, safe_size, (safe_page - 1) * safe_size),
     )
