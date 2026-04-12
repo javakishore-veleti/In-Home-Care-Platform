@@ -28,7 +28,7 @@ def run_migrations_offline() -> None:
     )
     with context.begin_transaction():
         context.execute(f"CREATE SCHEMA IF NOT EXISTS {SCHEMA}")
-        context.execute(f"SET search_path TO {SCHEMA}")
+        context.execute(f"SET search_path TO {SCHEMA}, public")
         context.run_migrations()
 
 
@@ -36,7 +36,7 @@ def run_migrations_online() -> None:
     connectable = create_engine(config.get_main_option("sqlalchemy.url"))
     with connectable.connect() as connection:
         connection.execute(text(f"CREATE SCHEMA IF NOT EXISTS {SCHEMA}"))
-        connection.execute(text(f"SET search_path TO {SCHEMA}"))
+        connection.execute(text(f"SET search_path TO {SCHEMA}, public"))
         connection.commit()
 
         context.configure(
