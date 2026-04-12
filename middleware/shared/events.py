@@ -13,11 +13,14 @@ from typing import Any
 
 APPOINTMENT_EVENTS_TOPIC = 'appointment.events'
 APPOINTMENT_BOOKED = 'appointment.booked'
+APPOINTMENT_CLAIMED = 'appointment.claimed'
 
 
-def build_appointment_event(event_type: str, appointment_id: int) -> dict[str, Any]:
-    return {
+def build_appointment_event(event_type: str, appointment_id: int, **extra: Any) -> dict[str, Any]:
+    event: dict[str, Any] = {
         'event_type': event_type,
         'appointment_id': int(appointment_id),
         'occurred_at': datetime.now(timezone.utc).isoformat(),
     }
+    event.update(extra)
+    return event

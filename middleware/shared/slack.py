@@ -70,10 +70,17 @@ def _call(method: str, payload: dict[str, Any]) -> dict[str, Any] | None:
     return body
 
 
-def post_message(channel: str, text: str, blocks: list[dict[str, Any]] | None = None) -> dict[str, Any] | None:
+def post_message(
+    channel: str,
+    text: str,
+    blocks: list[dict[str, Any]] | None = None,
+    thread_ts: str | None = None,
+) -> dict[str, Any] | None:
     payload: dict[str, Any] = {'channel': channel, 'text': text}
     if blocks is not None:
         payload['blocks'] = blocks
+    if thread_ts:
+        payload['thread_ts'] = thread_ts
     return _call('chat.postMessage', payload)
 
 

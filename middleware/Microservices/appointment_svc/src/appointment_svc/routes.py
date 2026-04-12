@@ -4,7 +4,7 @@ import logging
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from shared.events import APPOINTMENT_BOOKED, APPOINTMENT_EVENTS_TOPIC, build_appointment_event
+from shared.events import APPOINTMENT_BOOKED, APPOINTMENT_CLAIMED, APPOINTMENT_EVENTS_TOPIC, build_appointment_event
 from shared.kafka import publish
 
 from .schemas import (
@@ -120,7 +120,7 @@ def list_slack_posts(
 
 
 @router.post('/appointments/{appointment_id}/claim', response_model=AppointmentClaimResponse)
-def claim_appointment(
+async def claim_appointment(
     appointment_id: int,
     payload: AppointmentClaimRequest,
     store: AppointmentStore = Depends(get_store),
@@ -130,6 +130,8 @@ def claim_appointment(
     Called by slack_svc when a user clicks the Claim button. The endpoint is
     idempotent: if a claim already exists, returns the existing claim with
     `already_claimed=True` so the caller can render the right Slack response.
+    Also produces an appointment.claimed Kafka event so the knowledge
+    briefing agent can post a threaded reply.
     """
     if payload.appointment_id != appointment_id:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='appointment_id mismatch.')
@@ -141,6 +143,21 @@ def claim_appointment(
         slack_channel_id=payload.slack_channel_id,
         slack_message_ts=payload.slack_message_ts,
     )
+    if not result['already_claimed']:
+        try:
+            await publish(
+                APPOINTMENT_EVENTS_TOPIC,
+                key=str(appointment_id),
+                value=build_appointment_event(
+                    APPOINTMENT_CLAIMED,
+                    appointment_id,
+                    slack_channel_id=payload.slack_channel_id,
+                    slack_message_ts=payload.slack_message_ts,
+                    claimed_by_slack_user_id=payload.slack_user_id,
+                ),
+            )
+        except Exception as exc:
+            log.warning('appointment.claimed_event_failed id=%d error=%s', appointment_id, exc)
     return AppointmentClaimResponse(
         appointment=AppointmentResponse(**result['appointment']),
         claim=result['claim'],
