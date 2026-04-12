@@ -218,7 +218,7 @@ def delete_item(item_id: int) -> None:
 
 DEFAULTS_JSON = os.getenv(
     'KNOWLEDGE_DEFAULTS_JSON',
-    str(Path(__file__).resolve().parent.parent.parent.parent.parent / 'DevOps' / 'Seeds' / 'collections-repositories-defaults.json'),
+    str(Path(__file__).resolve().parent.parent.parent.parent.parent.parent / 'DevOps' / 'Seeds' / 'collections-repositories-defaults.json'),
 )
 
 def _run_setup_defaults(job_id: int) -> None:
