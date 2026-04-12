@@ -1,9 +1,9 @@
 # Knowledge Base — Brainstorming Document
 
-> **Status**: brainstorming / pre-implementation.
+> **Status**: Phase 1 complete, Phase 2 (pgvector) live, Phase 2c–4 next.
 > Read, annotate, push back on anything, then tell Claude "build phase N" when ready.
 >
-> **Last updated**: 2026-04-11
+> **Last updated**: 2026-04-12
 
 ---
 
@@ -16,16 +16,53 @@
 - [5. Architecture Diagram](#5-architecture-diagram)
 - [6. Existing Components That Plug In Directly](#6-existing-components-that-plug-in-directly)
 - [7. Build Phases](#7-build-phases)
-  - [Phase 1 — Collections + Items CRUD](#phase-1--collections--items-crud-2-days)
-  - [Phase 2 — VectorDB Indexing + RAG Search](#phase-2--vectordb-indexing--rag-search-2-days)
+  - [Phase 1a — Collections CRUD](#phase-1a--collections-crud)
+  - [Phase 1b — Repositories + Items + File Upload](#phase-1b--repositories--items--file-upload)
+  - [Phase 2a — pgvector Indexing (inline pipeline)](#phase-2a--pgvector-indexing-inline-pipeline)
+  - [Phase 2b — Multi-Strategy Chunking](#phase-2b--multi-strategy-chunking)
+  - [Phase 2c — RAG Search API](#phase-2c--rag-search-api)
   - [Phase 3 — LangGraph Briefing Agent + Slack Auto-Response](#phase-3--langgraph-briefing-agent--slack-auto-response-3-days)
   - [Phase 4 — Interactive Slack Q&A](#phase-4--interactive-slack-qa-2-days)
+  - [Phase 5 — Airflow + S3 + Multi-Tenant](#phase-5--airflow--s3--multi-tenant)
 - [8. Key Technical Decisions](#8-key-technical-decisions)
 - [9. Data Model (Draft)](#9-data-model-draft)
 - [10. LangGraph Flow Design](#10-langgraph-flow-design)
 - [11. Slack Threading UX](#11-slack-threading-ux)
 - [12. What Makes This a Moat](#12-what-makes-this-a-moat)
 - [13. Open Questions](#13-open-questions)
+- [14. Research Insights — Papers to Incorporate](#14-research-insights--papers-to-incorporate)
+  - [14.1 EICopilot — Query Masking for Intent-Based RAG](#141-eicopilot-baidu-arxiv-250113746--query-masking-for-intent-based-rag)
+  - [14.2 LiveVectorLake — Temporal Vector Lake](#142-livevectorlake-arxiv-260105270--temporal-vector-lake-for-mutable-enterprise-knowledge)
+  - [14.3 Combined Impact on Data Model](#143-combined-impact-on-our-phase-2-data-model)
+- [15. Multi-Jurisdiction Knowledge Scoping](#15-multi-jurisdiction-knowledge-scoping)
+  - [15.1 The Problem](#151-the-problem)
+  - [15.2 Industry Patterns](#152-how-industry-saas-companies-solve-this)
+  - [15.3 Real-World Validation](#153-real-world-validation)
+  - [15.4 Proposed Data Model Changes](#154-proposed-data-model-changes)
+  - [15.5 RAG Query Changes](#155-how-the-rag-query-changes)
+  - [15.6 Pricing & Packaging](#156-pricing-and-packaging-implications)
+  - [15.7 Implementation Phasing](#157-implementation-phasing)
+- [16. Admin Portal — Knowledge Base Menu & Repository Model](#16-admin-portal--knowledge-base-menu--repository-model)
+  - [16.1 Navigation Hierarchy](#161-navigation-hierarchy)
+  - [16.2 Page-by-Page UX](#162-page-by-page-ux)
+  - [16.3 Repository Item Types](#163-repository-item-types)
+  - [16.4 Repository Lifecycle](#164-repository-lifecycle)
+  - [16.5 Source Locations — Folder / S3](#165-source-locations--folder--s3)
+  - [16.6 Kafka → Airflow Async Indexing Pipeline](#166-kafka--airflow-async-indexing-pipeline)
+  - [16.7 Why Airflow](#167-why-airflow-not-inline-in-knowledge_svc)
+  - [16.8 Updated Data Model](#168-updated-data-model-replaces-section-9)
+  - [16.9 Airflow DAG Sketch](#169-airflow-dag-sketch-python)
+  - [16.10 Updated Phase Plan](#1610-updated-phase-plan-incorporating-repositories--airflow)
+- [17. Multi-Strategy Chunking for RAG](#17-multi-strategy-chunking-for-rag)
+  - [17.1 Why One Strategy Is Not Enough](#171-why-one-strategy-is-not-enough)
+  - [17.2 The Four Strategies](#172-the-four-strategies)
+  - [17.3 Storage Design — Same Table, Strategy Column](#173-storage-design--same-table-strategy-column)
+  - [17.4 How Retrieval Uses Multiple Strategies](#174-how-retrieval-uses-multiple-strategies)
+  - [17.5 De-Duplication of Overlapping Chunks](#175-de-duplication-of-overlapping-chunks)
+  - [17.6 How the LLM Sees It](#176-how-the-llm-sees-it)
+  - [17.7 Storage Math](#177-storage-math)
+  - [17.8 Implementation Plan](#178-implementation-plan)
+- [18. Implementation Status](#18-implementation-status)
 
 ---
 
@@ -1749,12 +1786,271 @@ with DAG(
 |---|---|---|
 | **Phase 1a** | Collections CRUD + admin grid page | Collections table + API + UI. Auto-seed from service types. |
 | **Phase 1b** | Repositories CRUD + admin list/detail pages | Repositories table + API + UI. Lifecycle: draft → locked. Item upload (files stored locally). |
-| **Phase 2a** | Airflow DAG: discover → extract → chunk → hash | Local Airflow stack uncommented in docker-all-up.sh. DAG triggered manually or via Kafka. Chunks stored in DB (no embedding yet). |
-| **Phase 2b** | Embedding + VectorDB indexing | pgvector extension enabled. Embedding via OpenAI API. Chunks with embeddings stored. Dedup via content hash. Temporal valid_from/valid_until. |
-| **Phase 2c** | RAG search API | `POST /knowledge/search` with collection scoping, jurisdiction filtering, temporal mode, query masking. |
+| **Phase 2a** | ✅ pgvector inline indexing | pgvector extension enabled. sentence-transformers embedding (384 dim). Chunks stored via BackgroundTask on Publish. Content-hash dedup. Per-engine indexing_runs tracking. |
+| **Phase 2b** | Multi-strategy chunking | 4 strategies (sentence, recursive, semantic, parent_doc) stored in same table with chunk_strategy column. De-dup across strategies. |
+| **Phase 2c** | RAG search API | `POST /knowledge/search` with collection scoping, multi-strategy retrieval, de-duplication, jurisdiction filtering, temporal mode, query masking. |
 | **Phase 3** | LangGraph briefing agent + Slack auto-reply on Claim | `appointment.claimed` Kafka event → knowledge_agent_svc → RAG → LLM → Slack threaded reply. |
 | **Phase 4** | Interactive Slack Q&A in thread | Slack Events API `message.channels` → re-run RAG with user question → threaded LLM reply. |
 | **Phase 5** | S3 source mode + multi-tenant | S3 folder scanning, org_id scoping, per-customer portals. |
+
+---
+
+---
+
+## 17. Multi-Strategy Chunking for RAG
+
+### 17.1 Why one strategy is not enough
+
+Different query types need different chunk granularities. A single
+chunking strategy produces good results for some queries and garbage
+for others:
+
+| Query type | Example | Best chunk size |
+|---|---|---|
+| Factual lookup | "What's the BP threshold for calling the physician?" | **Small** (1-2 sentences) — precise match, minimal noise |
+| Conceptual overview | "Explain the fall prevention protocol" | **Medium** (paragraph-sized, topic-grouped) — coherent context |
+| Procedural how-to | "How do I do a wound dressing change?" | **Large** (full section) — complete procedure, not a fragment |
+| Temporal/policy | "What changed in the April hygiene update?" | **Full item** (entire announcement) — need the whole update |
+
+If we only store recursive chunks (400 chars), the factual query
+drowns in surrounding text, and the procedural query gets cut
+mid-step. Multiple strategies let the retrieval engine find the
+**right granularity** for each query automatically.
+
+### 17.2 The four strategies
+
+All four run on the same document text, producing different chunk
+sets stored in the same table with a `chunk_strategy` column:
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    Same document text                    │
+│                                                         │
+│  SENTENCE                                               │
+│  Split on ". " — one chunk per sentence.                │
+│  → many small chunks (5-30 words each)                  │
+│  → best for factual Q&A lookup                          │
+│                                                         │
+│  RECURSIVE                                              │
+│  Split on \n\n → \n → ". " → " " — 200-400 tokens.    │
+│  → medium chunks respecting paragraph boundaries        │
+│  → best general-purpose retrieval                       │
+│  → improved from the naive fixed-char splitter          │
+│                                                         │
+│  SEMANTIC                                               │
+│  Embed each sentence. Merge adjacent sentences whose    │
+│  cosine similarity > 0.75 into one chunk.               │
+│  → variable-size chunks that follow topic boundaries    │
+│  → best for conceptual questions                        │
+│                                                         │
+│  PARENT_DOC                                             │
+│  Store the full item text as one chunk.                  │
+│  → one big chunk per item                               │
+│  → best for short items (announcements, notes)          │
+│  → also used as "parent" context when a small chunk     │
+│    matches but the LLM needs surrounding context        │
+└─────────────────────────────────────────────────────────┘
+```
+
+### 17.3 Storage design — same table, strategy column
+
+**NOT separate tables.** One table, one pgvector index, one query:
+
+```sql
+ALTER TABLE knowledge_schema.collection_chunks
+  ADD COLUMN chunk_strategy VARCHAR(30) NOT NULL DEFAULT 'recursive';
+
+-- The existing pgvector cosine-similarity index covers ALL strategies.
+-- No schema changes beyond the one column.
+```
+
+Example rows after indexing one item with all 4 strategies:
+
+```
+id | item_id | chunk_strategy | chunk_index | chunk_text                      | embedding
+1  | 42      | sentence       | 0           | "Check water temp (100-105°F)." | [0.12,...]
+2  | 42      | sentence       | 1           | "Gather supplies first."        | [0.08,...]
+3  | 42      | recursive      | 0           | "Check water temp ... supplies  | [0.11,...]
+   |         |                |             |  ... Wash face first (no soap)" |
+4  | 42      | semantic       | 0           | "Check water temp ... non-slip" | [0.10,...]
+5  | 42      | parent_doc     | 0           | (entire item text as one chunk) | [0.09,...]
+```
+
+### 17.4 How retrieval uses multiple strategies
+
+At query time, the RAG search queries ALL strategies in one SQL
+statement. pgvector's cosine similarity naturally surfaces the best
+match regardless of which strategy produced it:
+
+```python
+def search_knowledge(collection_id, query, top_k=10):
+    query_embedding = embed(query)
+
+    # One query, all strategies — pgvector handles the ranking
+    raw_results = db.execute("""
+        SELECT chunk_text, chunk_strategy, item_id,
+               embedding <=> %s AS score,
+               i.title AS source_title
+        FROM collection_chunks c
+        JOIN repository_items i ON i.id = c.item_id
+        WHERE c.collection_id = %s
+          AND c.valid_until IS NULL
+        ORDER BY embedding <=> %s
+        LIMIT %s
+    """, (query_embedding, collection_id, query_embedding, top_k * 2))
+
+    # De-duplicate overlapping chunks (see 17.5)
+    deduped = deduplicate_by_containment(raw_results)
+
+    return deduped[:top_k]
+```
+
+**No strategy selection logic needed.** The vector similarity score
+naturally picks the right granularity:
+- "What's the BP threshold?" → sentence chunk scores highest
+  (exact match, small, precise)
+- "Explain fall prevention" → recursive or semantic chunk scores
+  highest (coherent paragraph)
+- "What changed in April?" → parent_doc chunk scores highest
+  (the full announcement)
+
+### 17.5 De-duplication of overlapping chunks
+
+Multiple strategies produce overlapping text from the same item.
+Before sending to the LLM, remove redundancy:
+
+```python
+def deduplicate_by_containment(results):
+    """If chunk A is a substring of chunk B (same item), keep only B."""
+    kept = []
+    for r in results:
+        is_contained = False
+        for other in results:
+            if (other['item_id'] == r['item_id']
+                and r['chunk_text'] in other['chunk_text']
+                and len(other['chunk_text']) > len(r['chunk_text'])):
+                is_contained = True
+                break
+        if not is_contained:
+            kept.append(r)
+    return kept
+```
+
+This ensures the LLM gets the **most complete, non-overlapping** text
+blocks — e.g. if a sentence chunk matches but the recursive chunk from
+the same item also appears in the top-K, the recursive one wins
+(more context, same match).
+
+### 17.6 How the LLM sees it
+
+**The LLM never sees strategy labels.** The retrieval pipeline outputs
+clean text blocks with source citations. The prompt looks like:
+
+```
+Context from knowledge base:
+---
+[1] Source: "Vital Signs & Assessment" (Skilled Nursing)
+Adult vital sign normal ranges: BP 90/60 to 120/80 mmHg.
+Pulse: 60-100 bpm. Respirations: 12-20/min...
+
+[2] Source: "When to call the physician" (Skilled Nursing)
+Call immediately if: BP >180/120 or <80/50, pulse >120 or <50...
+
+[3] Source: "AHA Blood Pressure Categories" (link)
+https://www.heart.org/...
+---
+
+Question: What's the BP threshold for calling the physician?
+```
+
+The LLM answers from the context and cites [1], [2], [3] by source
+title. Which chunking strategy produced each block is irrelevant to
+the LLM — it's a retrieval optimization, not an LLM input.
+
+### 17.7 Storage math
+
+For the current 80 seeded items:
+
+| Strategy | Est. chunks | Rationale |
+|---|---|---|
+| sentence | ~400 | avg 5 sentences/item |
+| recursive | ~160 | avg 2 paragraphs/item |
+| semantic | ~200 | between sentence and recursive |
+| parent_doc | 80 | 1 per item |
+| **Total** | **~840** | |
+
+Storage: 840 chunks × 384-dim × 4 bytes/float = **~1.3 MB**.
+Negligible for pgvector (handles millions of vectors).
+
+Embedding cost: ~4x more embeddings per item (one-time on Publish,
+not per query). sentence-transformers processes ~100 chunks/sec on
+CPU. For 840 chunks: **~8 seconds** total embedding time.
+
+Query cost: unchanged. One `ORDER BY embedding <=> query LIMIT 10`
+regardless of how many strategies are stored — the index covers all
+rows.
+
+### 17.8 Implementation plan
+
+| Step | What | Effort |
+|---|---|---|
+| 1 | Add `chunk_strategy` column (alembic migration) | 10 min |
+| 2 | Implement 4 chunking functions in `indexing.py` | 1 hour |
+| 3 | Update `run_indexing_pipeline` to run all strategies per item | 30 min |
+| 4 | Update Stored Chunks UI to show strategy column + filter | 20 min |
+| 5 | Build `deduplicate_by_containment` for Phase 2c retrieval | 20 min |
+| **Total** | | **~2 hours** |
+
+---
+
+## 18. Implementation Status
+
+What has been built vs. what remains, as of 2026-04-12.
+
+### 18.1 Completed (live + committed)
+
+| Phase | Feature | Commit |
+|---|---|---|
+| **Phase 1a** | Collections CRUD + admin grid page, auto-seed 7 service types | `f6613d2` |
+| **Phase 1a** | Setup Defaults: one-click seed of 25 repos + 80 items from JSON | `8882899` |
+| **Phase 1a** | Tracked setup-defaults job with status card + reset | `da4c488` |
+| **Phase 1b** | Repositories CRUD + lifecycle (draft → lock → publish → indexed) | `f6613d2` |
+| **Phase 1b** | Repository items: notes, announcements, links + file upload | `f6613d2` |
+| **Phase 1b** | Per-repository vector DB checkboxes (7 engines, env-gated) | `31cb76b` |
+| **Phase 1b** | Publishing History with per-engine indexing_runs tracking | `31cb76b` |
+| **Phase 1b** | Clickable indexing run detail page + stored chunks viewer | `00b8e1b` |
+| **Phase 2a** | pgvector/pgvector:pg16 Docker image | `3e2c5c4` |
+| **Phase 2a** | pgvector extension + collection_chunks table (vector(384)) | `3e2c5c4` |
+| **Phase 2a** | Inline indexing pipeline: chunk + SHA-256 dedup + sentence-transformers embed + pgvector INSERT | `3e2c5c4` |
+| **Phase 2a** | Publish button triggers real background indexing | `3e2c5c4` |
+| — | knowledge_svc microservice on port 8010 | `f6613d2` |
+| — | api_gateway knowledge_routes + KnowledgeClient proxy | `f6613d2` |
+| — | Admin portal: Knowledge Base nav + 4 pages (collections, collection detail, repo detail, run detail) | `f6613d2` – `00b8e1b` |
+
+### 18.2 Next to build
+
+| Phase | Feature | Status | Effort |
+|---|---|---|---|
+| **Phase 2b** | Multi-strategy chunking (sentence, recursive, semantic, parent_doc) | Designed (section 17) | ~2 hours |
+| **Phase 2c** | RAG search API with multi-strategy retrieval + de-dup + query masking | Designed (sections 14, 17) | ~3 hours |
+| **Phase 3** | `appointment.claimed` Kafka event + LangGraph briefing agent + Slack threaded reply | Designed (sections 10, 11) | ~1 day |
+| **Phase 4** | Interactive Slack Q&A (Events API `message.channels` → RAG → threaded reply) | Designed (section 7) | ~1 day |
+| **Phase 5** | Airflow DAG for production indexing + S3 source mode + multi-tenant | Designed (sections 15, 16) | ~2 days |
+
+### 18.3 Architecture decisions made
+
+| Decision | Choice | Rationale |
+|---|---|---|
+| VectorDB (primary) | **pgvector** in same Postgres | Zero extra infra, same DB, proven at scale |
+| Embedding model (dev) | **sentence-transformers all-MiniLM-L6-v2** (384 dim) | Free, offline, fast on CPU |
+| Embedding model (prod) | OpenAI text-embedding-3-small (1536 dim) | Best quality/cost, needs API key |
+| Chunking | **Multi-strategy** (4 strategies, same table) | Different queries need different granularities |
+| Indexing trigger | **Inline BackgroundTask** (not Airflow yet) | Simpler, adequate for <1000 items |
+| Collection granularity | **1:1 with service types** | Simple, ships fast, hierarchy later |
+| Jurisdiction scoping | **org_id + jurisdictions columns** (added, unused) | Ready for multi-state/multi-tenant without migration |
+| Knowledge source | **Local folder** (dev), S3 (future) | knowledge_data/ gitignored, auto-created on repo create |
+| Dedup strategy | **SHA-256 content hash** per chunk (LiveVectorLake) | Skip unchanged chunks on re-index, ~90% cost reduction |
+| Temporal queries | **valid_from / valid_until** on chunks (LiveVectorLake) | Point-in-time compliance queries for healthcare audit |
 
 ---
 
